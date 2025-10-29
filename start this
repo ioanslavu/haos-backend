@@ -1,0 +1,140 @@
+celery -A config worker --loglevel=info
+codex
+Overview
+
+- One unified Party for all people/companies, with role assignments per domain (Master vs Publishing).
+- Separate assets: Work (composition) and Recording (sound recording). Roles and contracts attach by domain.
+- Contracts define rates, scope, recoupables, caps, and filters by revenue source/territory. Splits are derived from contracts at calculation
+time.
+- Royalty engine ingests earnings, matches to assets, applies contracts, posts payables, and creates statements and payments.
+- CRM overlays a single profile with role badges, balances, contracts, credited assets, and statements.
+
+Core Entities
+
+- Party: the central CRM entity (person or company) with contacts, tax, compliance.
+- RoleAssignment: attaches a role to a party within a domain and context (e.g., Artist on Master; Songwriter on Publishing).
+- Work (composition): title, ISWC, writers (via role assignments), publishers.
+- Recording (master): title, ISRC, links to Work, release info, contributors (artist, producer, mixer, mastering).
+- Release: album/EP/single grouping recordings.
+- Contract: between Party and Label; typed by domain; scope is catalog/playlist/recording/work/release/date range.
+- ContractTerm: line items for rates, tiers, source filters (DSP/download/license), territory, escalations, deductions, reserve policies.
+- Recoupable: advances/expenses with recoup rules (from which share, cross-collateralization groups).
+- EarningEvent: raw revenue by asset/domain/source/territory/currency (from DSPs, licenses, direct).
+- RoyaltyRun: versioned calculation snapshot for a period.
+- RoyaltyLine: calculated per-contract payable, with references to earnings and terms.
+- Statement: per party per period; opening/closing balance, recoupment, reserves, payable.
+- Payment: disbursements against statements; methods and references.
+- LedgerEntry: double-entry accounting; accounts for revenue, COGS/fees, payables, cash; supports multi-currency.
+
+Contracts & Splits
+
+- Master domain:
+    - Roles: Artist, Producer, Mixer, Mastering Engineer.
+    - Typical rules: artist percentage of net receipts; producer points recouped from artist share; mixing/mastering flat fees or points.
+- Publishing domain:
+    - Roles: Songwriter, Publisher, Co-publisher.
+    - Typical rules: writer/publisher split, mechanical/performance splits, admin fees; may be handled by a separate admin.
+- Scoping:
+    - Catalog-wide, per release, per recording/work, or date-range. Many producers are per-recording; artists are catalog or per-release.
+- Rates:
+    - Percent of net, fixed per-unit, tiered (units or revenue), escalations over thresholds, different by source/territory.
+- Deductions:
+    - Distribution fees, reserves, chargebacks, packaging (if any), PRO admin fees, FX spreads.
+- Recoupment:
+    - Advances and expenses with recoup rate and share source (label share, artist share, producer share), cross-collateralization groups.
+
+Royalty Calculation Flow
+
+- Ingest earnings:
+    - Normalize DSP/licensing reports to EarningEvent with asset, domain, source, units, gross, fees, net.
+- Match contracts:
+    - For each event, find applicable contracts by domain and scope; identify the “pool” (label net) and splits per roles.
+- Apply terms:
+    - Compute base = net after allowed deductions; apply rate schedule (tiered/escalations), territory filters, minimums/caps.
+- Recoupment:
+    - Apply recoupables in correct order and share source; respect cross-collateralization; track balances per recoupable group.
+- Post results:
+    - Create RoyaltyLine per contract; aggregate to Statement.
+    - Post LedgerEntry: debit revenue/credit payables, then debit payables/credit cash on payment.
+- Reserves and releases:
+    - Holdbacks by source (e.g., returns), release schedule in subsequent periods.
+
+Cashflow & Accounting
+
+- Double-entry ledger with accounts:
+    - Revenue, Distribution Fees, Recoupables Receivable, Party Payables, Cash/Bank, FX Gain/Loss.
+- Multi-currency:
+    - Store event currency, functional currency, FX rate at posting; revaluation optional for reporting.
+- Payment logic:
+    - Min payout threshold, preferred method, withholding/tax forms, split payees if assigned.
+
+CRM Views
+
+- Party profile:
+    - Role badges by domain; active/inactive dates; balances (master/publishing), open recoupables, next statement date.
+    - Contracts list with scope and status; linked assets; contact and compliance info.
+- Asset pages:
+    - Recording: contributors by role, linked work, earnings/royalties summary.
+    - Work: writers/publishers, PRO IDs, linked recordings earning summary.
+- Financial views:
+    - Statements list/detail; payment history; recoupables and reserves; source/territory breakdowns.
+- Operations:
+    - Royalty runs dashboard; import queue for earnings; exception handling (unmatched ISRC/ISWC).
+
+Proposed DB Schema (MVP)
+
+- parties(id, display_name, kind, tax_country, tax_id, email, status, created_at)
+- party_roles(id, party_id, domain, role_type, active_from, active_to, notes)
+- works(id, title, iswc, original_release_date, created_at)
+- recordings(id, title, isrc, work_id, release_id, original_release_date, created_at)
+- releases(id, title, upc, release_date, created_at)
+- asset_roles(id, domain, asset_type, asset_id, party_role_id, notes) // contributors/credits
+- contracts(id, party_id, domain, scope_type, status, start_date, end_date, currency, notes)
+- contract_scopes(id, contract_id, asset_type, asset_id) // optional for catalog-wide omit rows
+- contract_terms(id, contract_id, rate_type, rate_value, source_filter, territory_filter, tier_metric, tier_threshold, applies_to_share,
+deductions_json, reserves_json, priority)
+- recoupables(id, contract_id, name, type, opening_balance, recoup_from_share, xcollateral_group, created_at)
+- earnings(id, domain, asset_type, asset_id, source, territory, event_date, units, gross_amount, fee_amount, net_amount, currency,
+external_ref)
+- royalty_runs(id, period_start, period_end, status, created_by, created_at)
+- royalty_lines(id, run_id, party_id, contract_id, earning_id, term_id, base_amount, rate_applied, royalty_amount, currency)
+- statements(id, party_id, period_start, period_end, opening_balance, earnings_amount, recouped_amount, reserves_held, closing_balance,
+currency, status, generated_at)
+- payments(id, party_id, statement_id, amount, currency, method, reference, paid_at)
+- ledger_entries(id, entry_date, account, debit, credit, currency, ref_type, ref_id, memo)
+- fx_rates(as_of, from_ccy, to_ccy, rate) // optional if multi-currency
+
+Notes:
+
+- Use enums: domain = {master, publishing}; role_type = {artist, producer, songwriter, mixer, mastering, publisher, …}.
+- Keep asset_type in linking tables to support both recordings and works.
+- applies_to_share allows producer recouping from artist share vs label share.
+
+Endpoints (MVP)
+
+- GET/POST /parties, GET/POST /parties/:id/roles, GET /parties/:id/statements, POST /payments
+- GET/POST /recordings, GET/POST /works, GET/POST /releases
+- GET/POST /contracts, GET/POST /contracts/:id/terms, POST /contracts/:id/recoupables
+- POST /royalty-runs, GET /royalty-runs/:id, POST /royalty-runs/:id/finalize
+- GET /statements/:id, POST /statements/:id/approve
+
+MVP Scope
+
+- Master domain only; core roles: Artist, Producer.
+- Earnings import from 1–2 DSP formats; normalize to earnings.
+- Contracts with flat percent by source; basic deductions; single currency.
+- Advances and simple recoupment from artist share (no cross-collateral initially).
+- Royalty run, statements, payments; CRM party and asset pages.
+
+Key Questions
+
+- Domains: Do we handle publishing now or later? If now, which PRO/mechanical workflows?
+- Recoupment: Cross-collateralization rules? Producer recoup from artist share only?
+- Sources: Which DSPs and license types first? Any distro fee structure?
+- Currencies: Single functional currency or multi-currency with FX?
+- Thresholds: Minimum payout, reserve policies, statement cadence (monthly/quarterly)?
+- Tax: Withholding requirements, VAT/GST handling, and payee types (individual vs company)?
+
+If this direction fits, I can tailor the schema to your tech stack and sketch the first migrations and models for the MVP.
+
+▌ Write tests for @filename                                                

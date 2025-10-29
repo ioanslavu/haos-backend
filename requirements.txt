@@ -1,0 +1,48 @@
+# ===================================================
+# CORE 
+# ===================================================
+Django
+djangorestframework
+python-decouple
+psycopg[binary]
+
+# ===================================================
+# API
+# ===================================================
+django-cors-headers
+django-filter
+drf-spectacular
+drf-nested-routers
+
+# Auth (SIMPLE approach)
+django-allauth[socialaccount]
+
+# Audit (ONE package)
+django-auditlog
+
+# User Impersonation (for role testing)
+django-impersonate
+
+
+# ===================================================
+# Utils
+# ===================================================
+django-sequences
+django-extensions
+cryptography  # For encrypting sensitive data (CNP, etc.)
+
+orjson
+drf-orjson-renderer
+
+# Background Tasks
+celery
+redis
+
+
+# ===================================================
+# Contracts & Document Management
+# ===================================================
+dropbox-sign
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
