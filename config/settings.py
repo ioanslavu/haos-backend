@@ -254,6 +254,11 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_DOMAIN = None  # Allow cookies to work across localhost/127.0.0.1
 
+# Trust proxy headers only in production so Django detects HTTPS behind nginx
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
+
 
 # ===================================================
 # LOGGING CONFIGURATION
