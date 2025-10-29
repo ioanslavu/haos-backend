@@ -20,9 +20,14 @@ ${DJANGO_MANAGE_CMD} migrate --noinput
 echo "[entrypoint] Collecting static files..."
 ${DJANGO_MANAGE_CMD} collectstatic --noinput || echo "[entrypoint] collectstatic skipped or failed; continuing"
 
+# Optional: seed Sites and Google SocialApp if credentials provided
+if { [[ -n "${GOOGLE_CLIENT_ID:-}" && -n "${GOOGLE_CLIENT_SECRET:-}" ]] || [[ -n "${GOOGLE_OAUTH_CLIENT_ID:-}" && -n "${GOOGLE_OAUTH_CLIENT_SECRET:-}" ]]; }; then
+  echo "[entrypoint] Seeding Sites and SocialApp..."
+  ${DJANGO_MANAGE_CMD} seed_oauth || echo "[entrypoint] seed_oauth failed; continuing"
+fi
+
 echo "[entrypoint] Starting gunicorn..."
 exec gunicorn config.wsgi:application \
   --bind "${BIND_ADDR}" \
   --workers "${GUNICORN_WORKERS:-3}" \
   --timeout "${GUNICORN_TIMEOUT:-120}"
-

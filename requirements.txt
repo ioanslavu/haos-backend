@@ -30,6 +30,7 @@ django-impersonate
 django-sequences
 django-extensions
 cryptography  # For encrypting sensitive data (CNP, etc.)
+Pillow
 
 orjson
 drf-orjson-renderer
