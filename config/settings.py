@@ -200,12 +200,12 @@ SOCIALACCOUNT_ADAPTER = 'config.adapters.RestrictedDomainAdapter'
 # Store provider in the account
 SOCIALACCOUNT_STORE_TOKENS = True
 
-# Redirect after login - to frontend
-LOGIN_REDIRECT_URL = config('OAUTH_FRONTEND_URL', default='http://localhost:5173') + '/auth/callback'
-ACCOUNT_LOGOUT_REDIRECT_URL = config('OAUTH_FRONTEND_URL', default='http://localhost:5173')
+# Redirect after login/logout using account adapter (same-origin)
+LOGIN_REDIRECT_URL = '/auth/callback'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 
-# Headless mode for API
-ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
+# Use dynamic account adapter and the existing restricted social adapter
+ACCOUNT_ADAPTER = 'config.adapters.DynamicRedirectAccountAdapter'
 
 # Google OAuth provider settings
 SOCIALACCOUNT_PROVIDERS = {

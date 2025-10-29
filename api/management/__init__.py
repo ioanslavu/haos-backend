@@ -1,1 +1,2 @@
-# Management commands for API app
+"""Management package for API app."""
+

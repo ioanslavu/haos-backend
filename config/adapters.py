@@ -1,4 +1,5 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.account.adapter import DefaultAccountAdapter
 from allauth.exceptions import ImmediateHttpResponse
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -22,7 +23,8 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
         """
         logger.error(f"OAuth authentication error: provider={provider_id}, error={error}, exception={exception}")
 
-        frontend_url = config('OAUTH_FRONTEND_URL', default='http://localhost:5173')
+        # Redirect back to the same host the request came from
+        base_url = f"{request.scheme}://{request.get_host()}"
 
         error_message = "Authentication failed"
         if error:
@@ -30,7 +32,7 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
         elif exception:
             error_message = f"Authentication error: {str(exception)}"
 
-        error_url = f"{frontend_url}/auth/error?message={error_message}"
+        error_url = f"{base_url}/auth/error?message={error_message}"
         raise ImmediateHttpResponse(redirect(error_url))
 
     def pre_social_login(self, request, sociallogin):
@@ -43,26 +45,33 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
 
         if not email:
             logger.warning("No email provided by OAuth provider")
-            frontend_url = config('OAUTH_FRONTEND_URL', default='http://localhost:5173')
-            error_url = f"{frontend_url}/auth/error?message=No email address provided"
+            base_url = f"{request.scheme}://{request.get_host()}"
+            error_url = f"{base_url}/auth/error?message=No email address provided"
             raise ImmediateHttpResponse(redirect(error_url))
 
         domain = email.split('@')[-1]
 
         if domain not in self.ALLOWED_DOMAINS:
             logger.warning(f"Domain not allowed: {domain}, email: {email}")
-            frontend_url = config('OAUTH_FRONTEND_URL', default='http://localhost:5173')
             error_message = f"Only @hahahaproduction.com emails allowed. You tried: {email}"
-            error_url = f"{frontend_url}/auth/error?message={error_message}"
+            base_url = f"{request.scheme}://{request.get_host()}"
+            error_url = f"{base_url}/auth/error?message={error_message}"
             raise ImmediateHttpResponse(redirect(error_url))
 
         logger.info(f"Domain check passed for: {email}")
 
+    # SocialAccountAdapter doesn't control login redirect; AccountAdapter does.
+    # Keep this class focused on domain checks and error redirects.
+
+
+class DynamicRedirectAccountAdapter(DefaultAccountAdapter):
+    """
+    Ensure redirects go back to the same domain that initiated the flow.
+    Returning path-only URLs achieves same-origin redirects.
+    """
+
     def get_login_redirect_url(self, request):
-        """
-        Redirect to frontend after successful login.
-        """
-        frontend_url = config('OAUTH_FRONTEND_URL', default='http://localhost:5173')
-        redirect_url = f"{frontend_url}/auth/callback"
-        logger.info(f"Redirecting to: {redirect_url}")
-        return redirect_url
+        return "/auth/callback"
+
+    def get_logout_redirect_url(self, request):
+        return "/"
