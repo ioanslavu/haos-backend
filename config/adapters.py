@@ -1,5 +1,7 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
+from django.contrib.auth import get_user_model
+from uuid import uuid4
 from allauth.exceptions import ImmediateHttpResponse
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -75,3 +77,26 @@ class DynamicRedirectAccountAdapter(DefaultAccountAdapter):
 
     def get_logout_redirect_url(self, request):
         return "/"
+
+    def populate_user(self, request, user, data):
+        """
+        Ensure a unique username is set for default Django User models
+        that still require a unique username field, even when we treat
+        username as not required for login.
+        """
+        user = super().populate_user(request, user, data)
+        if hasattr(user, 'username') and not getattr(user, 'username', None):
+            base = ''
+            email = getattr(user, 'email', '') or data.get('email') or ''
+            if email and '@' in email:
+                base = email.split('@')[0]
+            candidate = base or uuid4().hex[:16]
+
+            User = get_user_model()
+            orig = candidate
+            i = 0
+            while User.objects.filter(username=candidate).exists():
+                i += 1
+                candidate = f"{orig}-{i}"
+            user.username = candidate
+        return user
