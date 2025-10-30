@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/v1/users/me/', api_views.CurrentUserView.as_view(), name='current_user'),
     path('api/v1/users/me/profile/', api_views.CurrentUserProfileView.as_view(), name='current_user_profile'),
     path('api/v1/users/', api_views.UserListView.as_view(), name='user_list'),
+    path('api/v1/users/department/', api_views.DepartmentUsersView.as_view(), name='department_users'),
     path('api/v1/users/<int:user_id>/', api_views.UserDetailView.as_view(), name='user_detail'),
 
     # Department Requests API

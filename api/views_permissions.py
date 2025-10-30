@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from .permissions import IsAdminOrSuperuser, IsSelfOrAdmin
 from rest_framework import status
 
 User = get_user_model()
@@ -11,6 +12,15 @@ User = get_user_model()
 
 class UserPermissionsView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'permissions_admin'
+
+    def get_permissions(self):
+        # GET: self or admin; POST/DELETE: admin/superuser only
+        if self.request.method in ["POST", "DELETE"]:
+            return [IsAuthenticated(), IsAdminOrSuperuser()]
+        if self.request.method == "GET":
+            return [IsAuthenticated(), IsSelfOrAdmin()]
+        return super().get_permissions()
 
     def get(self, request, user_id):
         try:
@@ -107,7 +117,9 @@ class UserPermissionsView(APIView):
 
 
 class AllPermissionsListView(APIView):
-    permission_classes = [IsAuthenticated]
+    # Only admins can enumerate all permissions
+    permission_classes = [IsAuthenticated, IsAdminOrSuperuser]
+    throttle_scope = 'permissions_admin'
 
     def get(self, request):
         perms = Permission.objects.select_related('content_type').all().order_by('content_type__app_label', 'content_type__model', 'codename')

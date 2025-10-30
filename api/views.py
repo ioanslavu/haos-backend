@@ -1,8 +1,10 @@
 from django.http import JsonResponse
+from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 from django.utils import timezone
+from django_ratelimit.decorators import ratelimit
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -28,12 +30,14 @@ from .permissions import (
 User = get_user_model()
 
 
+@ratelimit(key='ip', rate='10/m', method='GET')
 @require_http_methods(["GET"])
 @ensure_csrf_cookie
 def auth_status(request):
     """
     Returns the current authentication status and user info with profile.
     Also sets CSRF cookie for the frontend.
+    Rate limited to 10 requests per minute per IP.
     """
     if request.user.is_authenticated:
         # Ensure profile exists
@@ -64,11 +68,18 @@ def auth_status(request):
     })
 
 
+@ratelimit(key='ip', rate='3/h', method='GET')
 @require_http_methods(["GET"])
 def oauth_debug(request):
     """
     Debug endpoint to check OAuth configuration.
+    Rate limited to 3 requests per hour per IP.
+    Only accessible to administrators.
     """
+    # Allow only in DEBUG and for staff users. Return 404 to avoid leaking details.
+    if not settings.DEBUG or not (request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'detail': 'Not found'}, status=404)
+
     from allauth.socialaccount.models import SocialApp
     from django.contrib.sites.models import Site
 
@@ -175,30 +186,48 @@ class CurrentUserProfileView(APIView):
 
 class UserListView(generics.ListAPIView):
     """
-    List users based on role and department:
+    List all users (admin only) for user management page.
+    """
+    permission_classes = [IsAuthenticated, IsAdministrator]
+    queryset = User.objects.all().select_related('profile').order_by('-date_joined')
+    serializer_class = UserSerializer
+
+
+class DepartmentUsersView(generics.ListAPIView):
+    """
+    List users from the current user's department (for campaign handlers, etc.).
+
+    Access rules:
     - Admins: See all users
     - Managers/Employees: See users from their department only
+    - Guests/No department: See nothing
     """
-    permission_classes = [IsAuthenticated, HasDepartmentAccess]
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
     def get_queryset(self):
         """Filter users based on role and department."""
         user = self.request.user
 
-        # Base queryset
-        queryset = User.objects.all().select_related('profile').order_by('-date_joined')
+        # Base queryset - only active users
+        queryset = User.objects.filter(is_active=True).select_related('profile').order_by('first_name', 'last_name', 'email')
+
+        # Check if user has profile
+        if not hasattr(user, 'profile'):
+            return queryset.none()
+
+        profile = user.profile
 
         # Admins see all users
-        if hasattr(user, 'profile') and user.profile.is_admin:
+        if profile.is_admin:
             return queryset
 
-        # Managers and employees see only users from their department
-        if hasattr(user, 'profile') and user.profile.department:
-            return queryset.filter(profile__department=user.profile.department)
+        # Users without a department see nothing
+        if not profile.department:
+            return queryset.none()
 
-        # Default: no users
-        return queryset.none()
+        # Managers and employees see only users from their department
+        return queryset.filter(profile__department=profile.department)
 
 
 class UserDetailView(APIView):
@@ -371,6 +400,36 @@ class DepartmentRequestDetailView(APIView):
                 return Response(result_serializer.data)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except DepartmentRequest.DoesNotExist:
+            return Response(
+                {'error': 'Department request not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def delete(self, request, request_id):
+        """Cancel/withdraw a pending department request."""
+        try:
+            dept_request = DepartmentRequest.objects.get(id=request_id)
+
+            # Only the user who created the request can cancel it
+            if dept_request.user != request.user:
+                return Response(
+                    {'error': 'You can only cancel your own department requests'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Can only cancel pending requests
+            if dept_request.status != 'pending':
+                return Response(
+                    {'error': 'Only pending requests can be canceled'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            dept_request.delete()
+            return Response(
+                {'message': 'Department request canceled successfully'},
+                status=status.HTTP_200_OK
+            )
         except DepartmentRequest.DoesNotExist:
             return Response(
                 {'error': 'Department request not found'},

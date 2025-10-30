@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django import forms
 from .models import (
     ContractTemplate, ContractTemplateVersion, Contract, ContractSignature,
-    ContractScope, ContractRate, ShareType, ContractShare
+    ContractScope, ContractRate, ShareType, ContractShare, WebhookEvent
 )
 
 
@@ -300,3 +300,78 @@ class ContractShareAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('contract', 'share_type')
+
+
+@admin.register(WebhookEvent)
+class WebhookEventAdmin(admin.ModelAdmin):
+    list_display = ['received_at', 'event_type', 'contract', 'signer_email',
+                    'processed', 'verified_with_api', 'api_verification_attempts']
+    list_filter = ['event_type', 'processed', 'verified_with_api', 'received_at']
+    search_fields = ['signature_request_id', 'signer_email', 'contract__contract_number', 'event_hash']
+    readonly_fields = ['contract', 'event_type', 'signature_request_id', 'signer_email',
+                       'event_hash', 'received_at', 'processed', 'verified_with_api',
+                       'api_verification_attempts', 'raw_payload', 'client_ip',
+                       'verification_result', 'error_message', 'get_payload_display',
+                       'get_verification_display']
+    autocomplete_fields = ['contract']
+    date_hierarchy = 'received_at'
+
+    fieldsets = (
+        ('Event Information', {
+            'fields': ('received_at', 'event_type', 'signature_request_id', 'signer_email', 'event_hash')
+        }),
+        ('Related Contract', {
+            'fields': ('contract',)
+        }),
+        ('Verification Status', {
+            'fields': ('processed', 'verified_with_api', 'api_verification_attempts', 'get_verification_display')
+        }),
+        ('Request Details', {
+            'fields': ('client_ip', 'get_payload_display'),
+            'classes': ('collapse',)
+        }),
+        ('Error Information', {
+            'fields': ('error_message',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_payload_display(self, obj):
+        """Display formatted webhook payload."""
+        if not obj.raw_payload:
+            return 'No payload'
+
+        import json
+        try:
+            formatted = json.dumps(obj.raw_payload, indent=2)
+            html = f'<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">{formatted}</pre>'
+            return format_html(html)
+        except:
+            return str(obj.raw_payload)
+    get_payload_display.short_description = 'Webhook Payload'
+
+    def get_verification_display(self, obj):
+        """Display formatted verification result."""
+        if not obj.verification_result:
+            return 'No verification result'
+
+        import json
+        try:
+            formatted = json.dumps(obj.verification_result, indent=2)
+            html = f'<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">{formatted}</pre>'
+            return format_html(html)
+        except:
+            return str(obj.verification_result)
+    get_verification_display.short_description = 'API Verification Result'
+
+    def has_add_permission(self, request):
+        """Webhook events are created automatically - no manual adding."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Keep all webhook events for audit trail - no deletion."""
+        return request.user.is_superuser  # Only superusers can delete
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('contract')

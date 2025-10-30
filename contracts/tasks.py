@@ -17,7 +17,7 @@ def generate_contract_async(self, contract_id):
         contract_id: ID of the contract to generate
 
     Returns:
-        dict: Result with success status and data
+        dict: Result with success status and contract_id (sensitive data saved to database)
     """
     from .models import Contract
     from .services.contract_generator import ContractGeneratorService
@@ -46,11 +46,10 @@ def generate_contract_async(self, contract_id):
 
         logger.info(f"Successfully generated contract {contract_id}")
 
+        # Return minimal data - frontend fetches full contract from database
         return {
             'success': True,
-            'contract_id': contract_id,
-            'gdrive_file_id': result['file_id'],
-            'gdrive_file_url': result['web_view_link']
+            'contract_id': contract_id
         }
 
     except Contract.DoesNotExist:
@@ -84,7 +83,7 @@ def regenerate_contract_async(self, contract_id, placeholder_values):
         placeholder_values: New placeholder values dict
 
     Returns:
-        dict: Result with success status and data
+        dict: Result with success status and contract_id (sensitive data saved to database)
     """
     from .models import Contract
     from .services.contract_generator import ContractGeneratorService
@@ -118,11 +117,10 @@ def regenerate_contract_async(self, contract_id, placeholder_values):
 
         logger.info(f"Successfully regenerated contract {contract_id}")
 
+        # Return minimal data - frontend fetches full contract from database
         return {
             'success': True,
-            'contract_id': contract_id,
-            'gdrive_file_id': result['file_id'],
-            'gdrive_file_url': result['web_view_link']
+            'contract_id': contract_id
         }
 
     except Contract.DoesNotExist:
@@ -158,7 +156,7 @@ def send_for_signature_async(self, contract_id, signers_data, test_mode=True):
         test_mode: Whether to use Dropbox Sign test mode
 
     Returns:
-        dict: Result with success status and data
+        dict: Result with success status and contract_id (sensitive data saved to database)
     """
     from .models import Contract, ContractSignature
     from .services.contract_generator import ContractGeneratorService
@@ -235,10 +233,10 @@ def send_for_signature_async(self, contract_id, signers_data, test_mode=True):
 
         logger.info(f"Successfully sent contract {contract_id} for signature")
 
+        # Return minimal data - frontend fetches full contract from database
         return {
             'success': True,
-            'contract_id': contract_id,
-            'dropbox_sign_request_id': signature_request.signature_request_id
+            'contract_id': contract_id
         }
 
     except Contract.DoesNotExist:

@@ -1,5 +1,8 @@
 from rest_framework import serializers
 from .models import Work, Recording, Release, Track, Asset
+import os
+import re
+import uuid
 from identity.models import Identifier
 from identity.serializers import IdentifierSerializer
 
@@ -288,8 +291,18 @@ class AssetUploadSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         file = validated_data.pop('file')
 
+        # Sanitize file name to prevent path traversal or unsafe chars
+        raw_name = getattr(file, 'name', 'upload.bin') or 'upload.bin'
+        base_name = os.path.basename(raw_name)
+        name, ext = os.path.splitext(base_name)
+        safe_stem = re.sub(r'[^A-Za-z0-9._-]', '_', name)[:100] or 'file'
+        if safe_stem.startswith('.'):
+            safe_stem = safe_stem.lstrip('.') or 'file'
+        suffix = uuid.uuid4().hex[:8]
+        safe_name = f"{safe_stem}-{suffix}{ext[:10]}"
+
         # Get file metadata
-        validated_data['file_name'] = file.name
+        validated_data['file_name'] = safe_name
         validated_data['file_size'] = file.size
         validated_data['mime_type'] = file.content_type or 'application/octet-stream'
 
@@ -299,8 +312,8 @@ class AssetUploadSerializer(serializers.ModelSerializer):
 
         # Save file and create asset
         # In production, this would save to cloud storage
-        # For now, we'll just save the path reference
-        validated_data['file_path'] = f"assets/{file.name}"
+        # For now, we'll just save the sanitized path reference
+        validated_data['file_path'] = f"assets/{safe_name}"
 
         # Calculate checksum
         import hashlib

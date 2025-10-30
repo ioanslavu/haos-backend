@@ -26,6 +26,8 @@ class UserProfile(models.Model):
         (None, 'None'),
         ('digital', 'Digital'),
         ('sales', 'Sales'),
+        # New department added for sensitive data access policies
+        ('legal', 'Legal'),
     ]
 
     user = models.OneToOneField(

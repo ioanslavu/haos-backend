@@ -13,6 +13,7 @@ django-cors-headers
 django-filter
 drf-spectacular
 drf-nested-routers
+django-ratelimit  # Rate limiting for API endpoints
 
 # Auth (SIMPLE approach)
 django-allauth[socialaccount]
@@ -31,6 +32,7 @@ django-sequences
 django-extensions
 cryptography  # For encrypting sensitive data (CNP, etc.)
 Pillow
+django-ratelimit
 
 orjson
 drf-orjson-renderer

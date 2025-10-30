@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import ContractTemplate, ContractTemplateVersion, Contract, ContractSignature, ContractTerms, ShareType, ContractShare
 from identity.models import Entity
 from identity.serializers import EntityListSerializer
+from .security_utils import redact_placeholder_values, mask_email
 
 
 class ContractTemplateSerializer(serializers.ModelSerializer):
@@ -151,6 +152,34 @@ class ContractSerializer(serializers.ModelSerializer):
             return ContractTermsListSerializer(terms).data
         except ContractTerms.DoesNotExist:
             return None
+
+    def to_representation(self, instance):
+        """
+        Apply security redaction to sensitive fields in the response.
+
+        This prevents PII, financial data, and other sensitive information
+        from being exposed in API responses.
+        """
+        data = super().to_representation(instance)
+
+        # Redact sensitive placeholder values
+        if data.get('placeholder_values'):
+            data['placeholder_values'] = redact_placeholder_values(
+                data['placeholder_values'],
+                redaction_type='partial'
+            )
+
+        # Mask creator email for privacy
+        if data.get('created_by_email'):
+            data['created_by_email'] = mask_email(data['created_by_email'])
+
+        # Mask signer emails in signatures
+        if data.get('signatures'):
+            for signature in data['signatures']:
+                if signature.get('signer_email'):
+                    signature['signer_email'] = mask_email(signature['signer_email'])
+
+        return data
 
     class Meta:
         model = Contract
@@ -310,7 +339,20 @@ class ContractGenerationSerializer(serializers.Serializer):
             'today.year': str(today.year),
         })
 
-        placeholders.update(placeholder_overrides)
+        # Sanitize placeholder overrides
+        sanitized_overrides = {}
+        if len(placeholder_overrides) > 300:
+            raise serializers.ValidationError("Maximum 300 placeholder overrides allowed")
+
+        for key, value in placeholder_overrides.items():
+            if isinstance(value, str):
+                # Strip dangerous characters and limit length
+                sanitized_value = value.replace('<', '').replace('>', '').replace('{', '').replace('}', '').replace('[', '').replace(']', '')
+                sanitized_overrides[key] = sanitized_value[:2500]
+            else:
+                sanitized_overrides[key] = value
+
+        placeholders.update(sanitized_overrides)
 
         # Create Contract
         from .models import Contract

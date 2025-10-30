@@ -375,7 +375,9 @@ class GoogleDriveService:
             q_parts = ["trashed=false"]
 
             if query:
-                q_parts.append(f"name contains '{query}'")
+                # Escape single quotes and backslashes for Google Drive API query safety
+                escaped_query = query.replace('\\', '\\\\').replace("'", "\\'")
+                q_parts.append(f"name contains '{escaped_query}'")
 
             if mime_type:
                 q_parts.append(f"mimeType='{mime_type}'")

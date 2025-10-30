@@ -5,10 +5,28 @@ from uuid import uuid4
 from allauth.exceptions import ImmediateHttpResponse
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from decouple import config
+from decouple import config, Csv
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _is_localhost(request) -> bool:
+    host = (request.get_host() or '').lower()
+    # strip port if present
+    host = host.split(':', 1)[0]
+    return host in ('localhost', '127.0.0.1')
+
+
+def _frontend_base_url(request) -> str:
+    """Return the correct frontend base URL for redirects.
+
+    - Local dev: use OAUTH_FRONTEND_URL (default http://localhost:5173)
+    - Prod: same-origin scheme+host handled by nginx
+    """
+    if _is_localhost(request):
+        return config('OAUTH_FRONTEND_URL', default='http://localhost:5173')
+    return f"{request.scheme}://{request.get_host()}"
 
 
 class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
@@ -17,7 +35,9 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
     Only allows users with @hahahaproduction.com email addresses.
     """
 
-    ALLOWED_DOMAINS = ['hahahaproduction.com']
+    # Allowed domains are configured via env for flexibility.
+    # Example: OAUTH_ALLOWED_DOMAINS=example.com,acme.org
+    ALLOWED_DOMAINS = config('OAUTH_ALLOWED_DOMAINS', default='', cast=Csv()) or ['hahahaproduction.com']
 
     def authentication_error(self, request, provider_id, error=None, exception=None, extra_context=None):
         """
@@ -25,8 +45,8 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
         """
         logger.error(f"OAuth authentication error: provider={provider_id}, error={error}, exception={exception}")
 
-        # Redirect back to the same host the request came from
-        base_url = f"{request.scheme}://{request.get_host()}"
+        # Compute correct base URL for current environment
+        base_url = _frontend_base_url(request)
 
         error_message = "Authentication failed"
         if error:
@@ -47,7 +67,7 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
 
         if not email:
             logger.warning("No email provided by OAuth provider")
-            base_url = f"{request.scheme}://{request.get_host()}"
+            base_url = _frontend_base_url(request)
             error_url = f"{base_url}/auth/error?message=No email address provided"
             raise ImmediateHttpResponse(redirect(error_url))
 
@@ -56,7 +76,7 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
         if domain not in self.ALLOWED_DOMAINS:
             logger.warning(f"Domain not allowed: {domain}, email: {email}")
             error_message = f"Only @hahahaproduction.com emails allowed. You tried: {email}"
-            base_url = f"{request.scheme}://{request.get_host()}"
+            base_url = _frontend_base_url(request)
             error_url = f"{base_url}/auth/error?message={error_message}"
             raise ImmediateHttpResponse(redirect(error_url))
 
@@ -73,9 +93,15 @@ class DynamicRedirectAccountAdapter(DefaultAccountAdapter):
     """
 
     def get_login_redirect_url(self, request):
+        if _is_localhost(request):
+            base_url = _frontend_base_url(request)
+            return f"{base_url}/auth/callback"
         return "/auth/callback"
 
     def get_logout_redirect_url(self, request):
+        if _is_localhost(request):
+            base_url = _frontend_base_url(request)
+            return f"{base_url}/"
         return "/"
 
     def populate_user(self, request, user, data):

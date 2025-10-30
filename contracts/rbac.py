@@ -70,8 +70,8 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        # Must match department of object (or object has no department)
-        if obj.department and obj.department != dept:
+        # Must match department of object (reject if no department or different department)
+        if obj.department != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_view)
@@ -82,7 +82,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department and obj.department != dept:
+        if obj.department != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_publish)
@@ -93,7 +93,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department and obj.department != dept:
+        if obj.department != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_send)
@@ -104,7 +104,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department and obj.department != dept:
+        if obj.department != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_update)
@@ -115,7 +115,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department and obj.department != dept:
+        if obj.department != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_delete)
@@ -126,7 +126,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department and obj.department != dept:
+        if obj.department != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_regenerate)

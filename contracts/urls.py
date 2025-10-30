@@ -8,7 +8,7 @@ router.register(r'templates', ContractTemplateViewSet, basename='contract-templa
 router.register(r'contracts', ContractViewSet, basename='contract')
 
 urlpatterns = [
-    path('webhook/dropbox-sign/', dropbox_sign_webhook, name='dropbox-sign-webhook'),
+    path('webhook/dropbox-sign/<str:secret_token>/', dropbox_sign_webhook, name='dropbox-sign-webhook'),
     path('rbac/contracts/verbs/', ContractVerbsView.as_view(), name='contracts-verbs'),
     path('rbac/contracts/policy/', ContractPolicyView.as_view(), name='contracts-policy'),
     path('rbac/contracts/users/<int:user_id>/matrix/', UserContractsMatrixView.as_view(), name='contracts-user-matrix'),

@@ -944,3 +944,89 @@ class ContractShare(models.Model):
 
         delta = (self.valid_from - self.contract.term_start).days
         return (delta // 365) + 1
+
+
+class WebhookEvent(models.Model):
+    """
+    Track all webhook events for idempotency, security, and audit.
+    Stores every webhook received from Dropbox Sign with verification status.
+    """
+    contract = models.ForeignKey(
+        Contract,
+        on_delete=models.CASCADE,
+        related_name='webhook_events',
+        null=True,
+        blank=True,
+        help_text="Related contract (null if contract not found)"
+    )
+
+    # Event identification
+    event_type = models.CharField(
+        max_length=100,
+        help_text="Event type from Dropbox Sign (signature_request_signed, etc.)"
+    )
+    signature_request_id = models.CharField(
+        max_length=255,
+        db_index=True,
+        help_text="Dropbox Sign signature request ID"
+    )
+    signer_email = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Email of the signer (if applicable)"
+    )
+    event_hash = models.CharField(
+        max_length=64,
+        unique=True,
+        db_index=True,
+        help_text="SHA256 hash for idempotency (prevents duplicate processing)"
+    )
+
+    # Verification tracking
+    received_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    processed = models.BooleanField(
+        default=False,
+        help_text="Whether this event was successfully processed"
+    )
+    verified_with_api = models.BooleanField(
+        default=False,
+        help_text="Whether event was verified with Dropbox Sign API"
+    )
+    api_verification_attempts = models.IntegerField(
+        default=0,
+        help_text="Number of API verification attempts"
+    )
+
+    # Audit data
+    raw_payload = models.JSONField(
+        help_text="Complete webhook payload for forensics"
+    )
+    client_ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="IP address of webhook sender"
+    )
+    verification_result = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Result from Dropbox Sign API verification"
+    )
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if processing failed"
+    )
+
+    class Meta:
+        ordering = ['-received_at']
+        indexes = [
+            models.Index(fields=['event_hash']),
+            models.Index(fields=['contract', 'event_type', 'received_at']),
+            models.Index(fields=['signature_request_id', 'event_type']),
+            models.Index(fields=['processed', 'received_at']),
+        ]
+        verbose_name = "Webhook Event"
+        verbose_name_plural = "Webhook Events"
+
+    def __str__(self):
+        return f"{self.event_type} - {self.signature_request_id} @ {self.received_at}"

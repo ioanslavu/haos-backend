@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django_filters',  # For filtering in DRF
     'sequences',
     'impersonate',  # User impersonation for role testing
+    'auditlog',  # Audit trail for model changes
 
     # Allauth
     'allauth',
@@ -217,7 +218,9 @@ SOCIALACCOUNT_PROVIDERS = {
         ],
         'AUTH_PARAMS': {
             'access_type': 'online',
-            'hd': 'hahahaproduction.com',  # Restrict to this domain
+            # Use first allowed domain if provided via env; otherwise omit.
+            # Configure allowed domains with OAUTH_ALLOWED_DOMAINS=example.com,acme.org
+            'hd': (config('OAUTH_ALLOWED_DOMAINS', default='', cast=Csv()) or [''])[0],
         },
         'VERIFIED_EMAIL': True,
     }
@@ -244,21 +247,41 @@ CORS_ALLOW_HEADERS = [
 
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv())
 
-# Security settings from .env
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+# Secure session configuration
+# In production, force secure cookies and HTTPS
+if not DEBUG:
+    # Production: Force secure settings
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SAMESITE = 'Strict'  # Stronger CSRF protection
+    CSRF_COOKIE_SAMESITE = 'Strict'
 
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SAMESITE = 'Lax'
+    # HSTS (HTTP Strict Transport Security)
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Additional security headers
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
+
+    # Trust proxy headers so Django detects HTTPS behind nginx
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
+else:
+    # Development: Use environment variables for flexibility
+    SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+    CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Common settings for both production and development
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_DOMAIN = None  # Allow cookies to work across localhost/127.0.0.1
-
-# Trust proxy headers only in production so Django detects HTTPS behind nginx
-if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    USE_X_FORWARDED_HOST = True
 
 
 # ===================================================
@@ -296,6 +319,12 @@ LOGGING = {
     },
 }
 
+# Reduce log verbosity in production
+if not DEBUG:
+    LOGGING['loggers']['allauth']['level'] = 'WARNING'
+    LOGGING['loggers']['django.request']['level'] = 'WARNING'
+    LOGGING['loggers']['config.adapters']['level'] = 'INFO'
+
 
 # ===================================================
 # REST FRAMEWORK CONFIGURATION
@@ -318,6 +347,20 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    # Throttling (defense-in-depth). Global + scoped throttles for sensitive endpoints
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        # Scoped throttles
+        'impersonation': '20/minute',
+        'permissions_admin': '60/hour',
+        'roles_admin': '60/hour',
+    },
 }
 
 
@@ -336,7 +379,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 
 # Result settings
 CELERY_RESULT_EXTENDED = True
-CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour
+CELERY_RESULT_EXPIRES = 21600  # Results expire after 6 hours (for debugging/recovery)
 
 # Serialization
 CELERY_ACCEPT_CONTENT = ['json']

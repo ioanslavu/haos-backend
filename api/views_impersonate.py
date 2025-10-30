@@ -19,6 +19,7 @@ class StartImpersonationView(APIView):
     Only administrators can impersonate.
     """
     permission_classes = [IsAuthenticated, IsAdministrator]
+    throttle_scope = 'impersonation'
 
     def post(self, request):
         """
@@ -72,6 +73,7 @@ class StopImpersonationView(APIView):
     Stop impersonating and return to original user.
     """
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'impersonation'
 
     def post(self, request):
         """
@@ -103,6 +105,7 @@ class ImpersonationStatusView(APIView):
     Get current impersonation status.
     """
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'impersonation'
 
     def get(self, request):
         """

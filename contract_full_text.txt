@@ -1,0 +1,327 @@
+
+
+CONTRACT DE PRODUCȚIE, IMPRESARIAT ȘI MANAGEMENT ARTISTIC
+
+
+PĂRȚILE CONTRACTULUI
+
+{{maincompany.name}}, denumită în cele ce urmează ”Producătorul”, cu sediul social in {{maincompany.address}}, înregistrată la Registrul Comerțului sub nr. {{maincompany.registration_number}}, C.I.F. {{maincompany.cif}}, având cod IBAN  {{maincompany.iban}}, deschis la   {{maincompany.bank_name}}, reprezentată legal de   {{maincompany.admin_name}}, în calitate de   {{maincompany.admin_role}}.   
+și
+
+ {{entity.full_name}} {{entity.gender:denumit:denumită}} în continuare, ”Artistul” sau , identificat prin {{entity.identification_full}} , {{entity.gender:domiciliat:domiciliată}} în municipiul {{entity.city}}, Strada {{entity.address}}, jud. {{entity.state}}, având cont bancar {{entity.iban}}, deschis la {{entity.bank_name}}
+
+DEFINIȚII
+
+Artist  –  cetățeanul  român {{entity.full_name}} având  numele de scena {{entity.stage_name}}, precum si sub orice alt nume sub care acesta își desfășoară Activitatea Publică.
+Activitate publică - orice activitate pe care Artistul o va desfășura pentru public, cum ar fi activitățile de interpretare/execuție artistic sau/si participările ca Artist la evenimente culturale, educaționale, cinematografice, de divertisment, de promovare si publicitate sau orice alt gen de evenimente (denumite in continuare “Eveniment”), inclusiv, dar fără a se limita la:
+”Concerte” – interpretare/execuție muzicala prestata de Artist pe orice scena din Teritoriu, indiferent de numărul spectatorilor, inclusiv pe stadioane, in cluburi, restaurante, cazinouri, discoteci, spatii private si in orice alte locații. Susținerea Concertelor se va referi atât la interpretarea realizata de Artist, singur, cat si alături de alți artiști.
+”Promovare si publicitate” - participarea Artistului la realizarea unor materiale publicitare (inclusiv spoturi, fotografii) sau/si la evenimente publicitare pentru promovarea unor persoane, produse sau/si servicii.
+“Prezentări” – participarea Artistului la evenimente tinute in scop demonstrativ pentru anumite produse si/sau servicii.
+“Conferințe de presa” - participarea Artistului la evenimente organizate special pentru reprezentanții mass-media pentru evidențierea unui anumit eveniment artistic. „Emisiuni Tv/Radio”- participarea Artistului in talk show-uri, interviuri, show-uri, si in orice alte programe de TV/Radio.
+”Interpretarea actoricească”- participarea Artistului in calitate de actor într-o piesa de teatru, film, serial de televiziune, opera, balet, circ sau in orice alta modalitate opera de creație intelectuala.
+ “Prezentări de modă” - participarea Artistului ca model in prezentări publice de haine si accesorii.
+Organizator de Evenimente - orice persoana fizica/juridica care isi asuma riscul organizării Evenimentului la care participa ARTISTUL. Evenimentele vor putea fi organizate si de către PRODUCATOR sau de către Artist împreună cu PRODUCATORUL, caz in care vor fi tratați ca Organizatori de Evenimente.
+Comisionul PRODUCĂTORULUI – desemnează sumele datorate si plătite de Artist către PRODUCATOR, in schimbul si pe măsura îndeplinirii unei/unor acțiuni care fac obiectul prezentului Contract.
+Venit – toate si orice forma de remunerație încasată din Evenimente si/sau din transferul Drepturilor de Imagine, inclusiv orice forma de câștig, cu excepția celor din Drepturile de autor, indiferent daca este in numerar sau in natura, cum ar fi premiile primite pentru participarea ARTISTULUI la Evenimente, profitul înregistrat din vânzarea de bilete etc.
+Cheltuieli - desemnează toate costurile necesare deplasării si șederii ARTISTULUI si a echipei sale in localitatea unde are loc Concertul, costuri legate de înregistrarea piesei, înregistrarea videoclipului, promovarea piesei, implementarea campaniilor de imagine, promovare imagine ARTIST, cheltuieli cu organizarea conferinței de presa, cheltuieli pentru make-up, hairstyle, costume etc. ale ARTISTULUI; cheltuieli pentru închirierea scenelor, locațiilor pentru desfășurarea Evenimentelor; cheltuielile de promovarea si publicitate a Artistului sau a Evenimentului sau orice alte cheltuieli care se dovedesc a avea drept beneficiar final ARTISTUL sau orice element legat de proiectul ARTISTULUI.
+Rider de Concert - desemnează o lista cu tot ceea ce este necesar din punct de vedere tehnic sau/si organizatoric pentru participarea ARTISTULUI la un anumit Eveniment.
+Înregistrare - este fixarea sunetelor (Înregistrare sonora) sau a imaginilor (Înregistrare vizuala) sau a imaginilor combinate cu sunet (Înregistrare audiovizuala) provenite dintr-o interpretare/execuție aparținând Artistului, cu sau fără alte sunete, inclusiv reprezentarea digitala a acestora;
+Piesă - înseamnă interpretarea muzicala de către Interpret a unei opere de creație intelectuala;
+Master - înseamnă prima fixare a interpretării de către Artiști a Operei muzicale cu sau fără text, indiferent prin ce mijloace și pe ce suport este realizată, care urmează să fie utilizată pentru multiplicarea copiilor destinate comercializării Înregistrărilor sonore ce fac obiectul prezentului contract.
+Videoclip sau Înregistrare audiovizuala - înseamnă orice fixare a unei opere audiovizuale derivate din Opera, ce conține o interpretare artistica sau alte interpretări vizuale, coloana sonora a unei Înregistrări sonore sau a unei interpretări “live” a Operei, interpretări realizate de Artiști.
+PPD - este prețul de vânzare mediu al unei Unități, exclusiv TVA, practicat de Producător in comerțul en-gross de Unități;
+ Radiodifuzare - înseamnă emiterea unei Interpretări/Imagini/înregistrări de către un organism de radiodifuziune ori de televiziune, prin orice mijloc ce servește la propagarea fără fir a semnelor, sunetelor sau imaginilor, ori a reprezentării acestora, inclusiv comunicarea ei publica prin satelit, in scopul recepționării de către public; sau transmiterea unei Interpretări/Imagini/înregistrări sau a reprezentării acesteia, prin fir, prin cablu, prin fibra optica sau prin orice alt procedeu similar, cu excepția rețelelor de calculatoare, in scopul recepționării ei de către public;
+ Reproducere - înseamnă realizarea, integrala sau parțială, a uneia ori a mai multor copii ale unei Interpretări fixate/Înregistrare/Imagine, direct sau indirect, temporar ori permanent, prin orice mijloc si sub orice forma, inclusiv realizarea oricărei înregistrări sonore sau audiovizuale, precum si stocarea permanenta ori temporara a acesteia cu mijloace electronice;
+ Retransmiterea prin cablu - înseamnă retransmiterea simultana, nealterata si integrala, de către un operator, prin fir, prin cablu, prin fibra optica sau prin orice alt procedeu similar, cu excepția rețelelor de calculatoare, sau printr-un sistem de difuzare prin unde ultrascurte, pentru recepționarea de către public, a unei transmisii inițiale, cu sau fără fir, inclusiv prin satelit, de servicii de programe de radiodifuziune sau de televiziune, destinate recepționării de către public;
+ Sincronizare – înseamnă procesul de reproducere al Înregistrărilor pe alte înregistrări, in sincronizare cu imagini, cum ar fi spoturile publicitare, coloane sonore de film;
+Single - este o Înregistrare sonora ce conține minimum 2 variante de înregistrare sonora pentru aceeași opera muzicala si care, la alegerea Producătorului, poate fi lansat doar in format EMD;
+Teritoriul -  reprezintă toate teritoriile lumii;
+ Unitate - înseamnă o copie fizica a Înregistrării;
+ Venitul net - este venitul net încasat de către PRODUCĂTOR (exclusiv TVA si comisioane aplicabile pentru realizarea încasărilor si colectarea veniturilor aferente) dobândite in baza prezentului Contract mai puțin cheltuielilor cu producerea Înregistrărilor, promovarea Înregistrărilor, promovarea ARTISTULUI, sesiuni fotografice, precum si ocazionate cu activități conexe actor activități cum ar fi dar fără a se limita la costuri make-up, hair, styling etc.
+EMD (Electronic Media Distribution) - reprezintă orice transmisie, distributie sau punere la dispoziție a Înregistrărilor sonore sau audiovizuale in format electronic, prin orice mijloc cunoscut sau care va apărea in viitor, inclusiv dar nu limitat la: linii telefonice, satelit, internet, streaming, download si orice alt format existent sau care se va inventa in viitor, dar fiind exclus formatul fizic (cum ar fi CD, DVD, etc);
+Legea - înseamnă Legea privind dreptul de autor și drepturile conexe, nr. 8 din 14 martie 1996, cu modificările și completările ulterioare.
+
+	Părțile au decis de comun acord încheierea prezentului Contract de management si impresariat artistic (numit “Contractul” in cele ce urmează) in următoarele condiții:
+
+OBIECTUL CONTRACTULUI
+
+Prezentul Contract are ca obiect o colaborarea exclusivă între Artist si Producător care va consta in crearea si exploatarea în viitor a unor înregistrări sonore și fonograme pe baza interpretărilor și/sau a execuțiilor pe care Artistul le va interpreta, pe durata contractului, cu referire la opere constând în compoziții muzicale, opere dramatice, opere dramatico-muzicale și/sau opere audiovizuale.
+Prin semnarea prezentului Contract, ARTISTUL acorda PRODUCATORULUI dreptul exclusiv de exploatare a imaginii sale,  managementul carierei sale artistice, precum si dreptul exclusiv de impresariere si de a decide asupra desfășurării Activitatii Publice a ARTISTULUI, după consultarea prealabilă cu acesta.
+Drepturile patrimoniale conexe dreptului de autor asupra Interpretării
+ARTISTUL cedează PRODUCATORULUI, pentru Teritoriu si Durata Contractuala, dreptul patrimonial exclusiv de a autoriza ori de a interzice prima fixare a Interpretării ce aparține ARTISTULUI, in toate limbile din lume. 
+De asemenea, ARTISTUL cedează, in mod exclusiv, PRODUCĂTORULUI, pentru întreg teritoriul lumii, si pentru întreaga durata de protecție legala a drepturilor patrimoniale conexe dreptului de autor prevăzută de art. 102 din Legea nr. 8/1996 (sau de legislatia altor state din lume, in cazul in care protecția legala recunoscuta de aceste state este mai mare decât cea acordata de legea romana), inclusiv pentru perioadele de prelungire sau reînnoire legala a acestora, toate drepturile patrimoniale conexe dreptului de autor prevăzute de art. 98 din Legea nr. 8/1996 (inclusiv cele care sunt recunoscute de legislațiile altor state din lume) asupra Interpretarilor personale fixate pe Durata Contractuala. 
+Este pe deplin agreat de Părți ca atât PRODUCATORUL, cat si/sau orice alt terț autorizat de PRODUCATOR are dreptul sa prelucreze, sa modifice sau sa transforme in orice fel Interpretarea, inclusiv prin scurtare, prin adăugarea de efecte audio si/sau vizuale, fără ca ARTISTUL sa poată invoca prejudicii de onoare sau de reputație.
+PRODUCATORUL nu va putea fi tras la răspundere daca vreo casa de discuri sau persoana autorizata de PRODUCATOR nu a menționat numele ARTISTULUI cu ocazia utilizării Interpretării, având însă obligația de a depune toate diligentele pentru a solicita respectivei entități rectificarea erorii ce i-a fost semnalata de către ARTIST printr-o notificare scrisa.
+Drepturile de imagine ale Artistului
+Pe Durata Contractului si pentru Teritoriu, ARTISTUL cedează exclusiv PRODUCATORULUI dreptul absolut, transferabil către terțe persoane, de a utiliza si de a consimți la utilizarea de către alții a Drepturilor de Imagine, PRODUCATORUL fiind singurul in drept sa exercite si sa exploateze drepturile de imagine ale ARTISTULUI.
+Pe întreaga durata de protecție legala a drepturilor patrimoniale conexe dreptului de autor prevăzută de art. 102 din Legea nr. 8/1996 (sau de legislația altor state din lume, in cazul in care protecția legala recunoscuta de aceste state este mai mare decât cea acordata de legea romana), inclusiv pentru perioadele de prelungire sau reînnoire legala a acestora, si pentru întreg teritoriul lumii, ARTISTUL cedează exclusiv PRODUCATORULUI dreptul absolut, transferabil către terțe persoane, de a utiliza si de a consimți la utilizarea de către alții a Drepturilor de Imagine ale ARTISTULUI fixate indiferent de format pe Durata Contractului.
+Drepturile patrimoniale asupra Inregistrarilor
+In cazul in care PRODUCATORUL si-a asumat responsabilitatea organizarii si finanțării realizării primei fixări a materialului interpretat de ARTIST, PRODUCATORUL, in calitate de PRODUCATOR de înregistrări sonore, respectiv in calitate de PRODUCATOR de înregistrări audiovizuale va avea toate drepturile patrimoniale exclusive recunoscute de art. 105, respectiv de art. 1063 din Legea nr. 8/1996 asupra Înregistrărilor.  
+In cazul in care, pe Durata Contractuala, ARTISTUL si-a asumat responsabilitatea organizării si finanțării realizării primei fixări a materialului interpretat de ARTIST, ARTISTUL cedează PRODUCATORULUI, cu titlu exclusiv, pe întreaga durata de protecție legala a drepturilor patrimoniale conexe dreptului de autor prevăzută de art. 102 din Legea nr. 8/1996 (sau de legislația altor state din lume, in cazul in care protecția legala recunoscuta de aceste state este mai mare decât cea acordata de legea romana), inclusiv pentru perioadele de prelungire sau reînnoire legala a acestora, si pentru întreg teritoriul lumii, toate drepturile patrimoniale conexe dreptului de autor prevăzute de art. 98, art.  105, respectiv de art. 1063 din Legea nr. 8/1996 asupra interpretărilor fixate pe aceste înregistrări, precum si asupra Înregistrărilor înseși.
+Pentru Interpretările fixate/Înregistrările realizate anterior de data semnării prezentului Contract, dar care fac obiectul prezentului Contract, ARTISTUL cedează PRODUCATORULUI, cu titlu exclusiv, pe întreaga durata de protecție legala a drepturilor patrimoniale conexe dreptului de autor prevăzută de art. 102 din Legea nr. 8/1996 (sau de legislația altor state din lume, in cazul in care protectia legala recunoscuta de aceste state este mai mare decât cea acordata de legea romana), inclusiv pentru perioadele de prelungire sau reînnoire legala a acestora, si pentru intreg teritoriul lumii, toate drepturile patrimoniale conexe dreptului de autor prevazute de art. 98, art. 105, art. 1063 din Legea nr. 8/1996 (inclusiv cele care vor fi recunoscute de lege in viitor) asupra Interpretărilor fixate pe aceste înregistrări, precum si asupra Înregistrărilor înseși; si aproba toate utilizările de către PRODUCATOR, direct si/sau prin licențiații/ cesionarii PRODUCATORULUI, a acestor drepturi care au avut loc pana la data semnării prezentului Contract.
+Dispoziții referitoare la activitatea de impresariere a ARTISTULUI
+Pe durata Contractului si in Teritoriu, ARTISTUL acorda PRODUCĂTORULUI un drept exclusiv de exploatare a Concertelor ARTISTULUI.  In acest sens, PRODUCĂTORUL va avea dreptul de a identifica concerte, de a încheia contracte, de a incasa remunerația din exploatarea concertelor ARTISTULUI. 
+Drepturile cedate in baza prezentului Contract se extind la toate modurile de exprimare, de fixare si/sau de utilizare a Interpretărilor/Imaginilor/Înregistrărilor, fără limitări de orice fel, cum ar fi cu titlu de exemplu: orice fel de suport fizic (CD. CD-e, CD-I, Vinyl, SACD, DVD, MC, UMD, Blu-ray, etc), orice mijloc de transmitere pe calea undelor (Radio, TV, cablu, satelit etc), orice fel de prestație publica, orice rețea electronica interactiva sau ne-interactiva (exploatare online prin Internet-streaming, Internet-download, webcasting, Simulcasting, etc), orice retea de telefonie mobila sau prin orice tip de dispozitiv mobil (in, to, via cellphones/Handies, PDA, Palmtops si asa numitele „Realtones/Truetones/Mastertones/Videotones“; “Fulltracks” sau/si prin MMS {pics/ videos}, mono si/sau polifonic ringtones, Ringbacktones, wallpapers, e-card, etc), precum si orice alt tip de mijloc care permite livrarea electronica (Audio-/Video-On-Demand, etc).
+Dreptul de reproducere al Imaginii fixate, al Interpretării fixate si al Înregistrărilor este cedat pentru un tiraj nelimitat.
+Producătorul este unicul îndreptățit la exploatarea prin orice surse a Înregistrărilor precum si la exploatarea drepturilor de Imagine ale ARTISTULUI si la administrarea si colectarea tuturor veniturilor din exploatarea acestora si la efectuarea tuturor decontărilor cu ARTISTUL.
+Prin semnarea prezentului Contract, are loc cesiunea cu titlu exclusiv si pentru toata durata de protecție legala, de la Artist către Producător, a tuturor drepturilor patrimoniale conexe drepturilor de autor pe care Artistul le deține sau pe care le va dobândi pe durata prezentului contract în legătură cu propriile interpretări ori execuții de opere constând în compoziții muzicale, opere dramatico-muzicale și/sau opere audiovizuale, care vor fi realizate pe parcursul derulării prezentului Contract. Pentru claritate, Artistul, cedează Producătorului, cu titlu exclusiv următoarele drepturi patrimoniale cu privire la operele audiovizuale ce fac obiectul acestui contract, precum si toate drepturile patrimoniale ce privesc prestația Artistului: 
+fixarea interpretării sau a execuției sale;
+reproducerea pe orice tip de suport fizic sau digital (înregistrări sau EMD) a interpretării sau a execuției fixate;
+distribuirea interpretării sau a execuției fixate;
+închirierea  interpretării sau a execuției fixate;
+împrumutul interpretării sau al execuției fixate;
+importul in vederea comercializării pe piața interna a interpretării sau a execuției fixate;
+radiodifuzarea şi comunicarea publică a interpretării sau a execuției sale;
+punerea la dispoziția publicului a interpretării sau a execuției sale fixate, astfel încât sa poată fi accesata, in orice loc si in orice moment ales, in mod individual, de către public;
+retransmiterea prin cablu sau prin orice alt mijloc, inclusiv electronic, a interpretării sau a execuției fixate. 
+Stabilirea de relații contractuale exclusive între Producător şi Artist pentru managementul şi impresariatul artistic al Artistului, în sens de promovare şi mediatizare, producție audio-video, distribuție şi difuzare, dans, entertainment, moderație, animație, modelling, precum şi pentru utilizarea şi exploatarea imaginii şi numelui Artistului.
+Prin semnarea prezentului Contract, Artistul acorda Producătorului dreptul exclusiv de management al carierei sale artistice muzicale, precum si dreptul exclusiv de impresariere si de a decide asupra exploatării activității publice a Artistului.
+
+DURATA CONTRACTULUI
+
+Prezentul Contract este valabil pe o perioada de {{contract.duration_years}} (patru) ani, începând cu data semnării si se poate prelungi prin act adițional semnat de părți.
+Contractul se va prelungi in mod automat pentru noi perioade de 1 an in absenta unei notificări emise de partea care nu dorește prelungirea, cu cel puțin {{contract.notice_period_days}} de zile înainte de expirare.
+In cazul in care, la momentul expirări sau la momentul notificării de încetare a relațiilor contractuale, emisa la inițiativa ARTISTULUI – exista o investiție in Mastere si/sau videoclip si/sau promovare pentru opere nefixate, iar piesa/piesele se aduc/e la cunoștință publicului ,cu acordul ambelor părți, contractul se prelungește automat pe o perioada de încă 1 (unu) an.
+
+DURATA CESIUNII
+
+ 5.1. Durata cesiunii coincide cu perioada maximă de timp pentru care, potrivit legii, sunt în ființă drepturile patrimoniale cesionate de către Artist. Pentru claritate, durata cesiunii nu este în niciun fel afectată de eventuala încetare a contractului.
+5.2. Cesiunea are caracter exclusiv. Ca urmare a cesiunii, Producătorul devine unicul titular al drepturilor patrimoniale conexe privitoare la interpretări sau execuții ale Artistului realizate pe durata contractului sau menționate printr-o anexă la acesta. Artistul nu va mai putea autoriza exercitarea și nu va mai putea exercita el însuși niciunul dintre aceste drepturi pentru întreaga durată a cesiunii
+5.3. Producătorul este în drept să transfere, la rândul său, în orice formă, unele sau toate dintre drepturile care i-au fost cesionate în virtutea prezentului contract, fără nicio limitare și fără a fi necesar să obțină aprobarea prealabilă sau să îl notifice pe Artist.    
+
+VI.  TERITORIUL CONTRACTULUI
+
+ 6.1.	Efectele acestui contract se vor produce, în cea mai mare măsura permisa de normele imperative, pe teritoriul României, precum și pe teritoriul tuturor statelor lumii, prezente și viitoare.
+
+DREPTURILE ȘI OBLIGȚIILE PĂRȚILOR
+
+ 7.1. PRODUCĂTORUL are următoarele drepturi și obligații:
+
+7.1.1.     DREPTURILE PRODUCĂTORULUI:
+dreptul patrimonial exclusiv de a autoriza sau de a interzice următoarele:
+-reproducerea prin orice mijloc și sub orice formă a propriilor înregistrări sonore;
+-distribuirea propriilor înregistrări sonore;
+-închirierea propriilor înregistrări sonore;
+-împrumutul propriilor înregistrări sonore;
+-importul, în vederea comercializării pe piața internă, a copiilor legal realizate ale propriilor înregistrări;
+-importul de copii ale propriilor înregistrări sonore, realizate fără autorizarea sa;
+-radiodifuzarea și comunicarea publică a propriilor înregistrări sonore;
+-punerea la dispoziția publicului a propriilor înregistrări sonore, astfel încât să poată fi accesate, în orice loc și în orice moment ales, în mod individual, de către public;
+-retransmiterea prin cablu a propriilor înregistrări sonore;
+dreptul de exploatare si monetizare in mediul digital a inregistrarilor sonore si/sau audiovizuale ale proiectului care formeaza obiectul prezentului Contract, pe toată durata de protecție legală și pentru toate teritoriile lumii;
+sa decidă asupra repertoriului pe care il va interpreta/executa Artistul;
+sa decidă imaginea pe care o va avea si promova Artistul;
+sa decidă asupra mijloacelor media care vor fi folosite pentru promovarea (Presa scrisa, audio, TV, Panotaj, Out-door, spoturi publicitare, etc.) Artistului;
+sa decidă asupra numelui de scena sub care va fi promovat Artistul sau sa decidă schimbarea numelui de scena;
+sa înregistreze si sa dețină, in nume propriu, ca marca numele de scena sub care va fi promovat Artistul;
+sa rezerve si sa dețină numele de domeniu unde va fi postat website-ul de promovare al Artistului, sa realizeze si sa promoveze acest website;
+sa decidă casa de discuri, studioul de înregistrări, impresarul/sub-agentul de booking si echipa de colaboratori ai Artistului in domeniul artistic;
+sa negocieze si sa încheie contracte care au ca obiect participarea Artistului la Evenimente, cesiunea drepturilor de autor sau/si a drepturilor conexe dreptului de autor aparținând Artistului, sponsorizarea Evenimentelor, precum si orice alt element din cariera artistica a Artistului;
+sa decidă asupra oricărui alt aspect al carierei artistice a Artistului.
+sa decidă cu privire la alegerea Producătorului si a Editorului, pentru piesele muzicale create si/sau interpretate de Artist.
+sa decidă împreună cu Artistul asupra oportunității si/sau a momentului si a modalității/circumstanțelor lansării oricărei piese muzicale interpretate si/sau create de Artist.
+dreptul de a administra pagina web de promovare a Artistului, creata in legatura cu promovarea Proiectului care face obiectul prezentului Contract, precum și toate conturile de pe rețelele de socializare existente la semnarea prezentului Contract sau care vor fi disponibile in viitor, pe toată perioada contractuală;
+dreptul de a-i pretinde Artistului să îi puna la dispoziție toate documentele, autorizațiile, activitățile și, în general, toate cele necesare (incluzând, fără a se limita la, prezența sa la anumite evenimente, fixarea unor noi execuții într-un anumit interval de timp, participarea la ședințe foto) pentru a permite Producătorului să își îndeplinească obligațiile contractuale;
+dreptul de a stabili oportunitatea participării Artistului la un Eveniment sau asupra transferului Drepturilor de Imagine;
+dreptul de a stabili Riderul Tehnic pentru Evenimente;
+dreptul de a stabili programul artistic pentru Evenimente;
+dreptul de a alege piesele muzicale create si/sau interpretate de Artist.
+
+	7.1.2.	OBLIGAȚIILE PRODUCĂTORULUI :
+sa includă in portofoliul sau de ofertare datele si materialele demo ale Artistului;
+sa comunice Artistului locul si data evenimentului la care trebuie acesta sa participe, cu cel puțin 48 de ore înainte fata de momentul tinerii Evenimentului;
+sa facă demersuri pentru obținerea de contracte pentru Artist, sa le negocieze in favoarea acestuia, fiind liber a decide daca accepta sau nu oferta primita/negociata;
+sa faca demersuri pentru a asigura înscrierea artistului la concursuri, festivaluri, turnee, spectacole, daca le considera necesare pentru dezvoltarea carierei profesionale a acestuia ;
+sa păstreze întreaga corespondenta de oferte si afaceri legate de obiectul prezentului contract;
+sa faca demersuri pentru promovarea si mediatizarea prin toate mijloacele, a Evenimentelor Artistului;
+sa realizeze distribuția Masterului si a tuturor Operelor derivate in mediul Digital (Youtube, magazine digitale de ex. Spotify, AppleStore, iTunes, SoundCloud etc. in mod direct sau prin intermediul unui agregator, dupa caz);
+sa promoveze piesele la Radio, TV, in mediul online – digital atat pe canalul Artistului cat si pe canalele conexe Producătorului;
+sa remunereze sau să raporteze după caz redevențele ARTISTULUI conform Cap. VIII;
+sa garanteze un număr minimum de {{contract.minimum_launches}} lansări pe an cu o valoare maxima de investiție de {{investment.per_song}} EUR pe piesa/pe an;
+sa raporteze anual analiza Proiectului începând cu al doilea an contractual, indiferent daca investițiile sunt sau nu acoperite;
+
+7.2. 	DREPTURILE ȘI OBLIGAȚIILE ARTISTULUI:
+	7.2.1.	Drepturile Artistului:
+de a primi de la PRODUCATOR sumele cuvenite ARTISTULUI in baza prezentului Contract;
+dreptul de a încasa veniturile si/sau redevențele care i se cuvin in termenul agreat, conform cap. VIII;
+dreptul de a solicita o data pe an consultarea tuturor documentelor care au stat la baza realizării Veniturilor si plății Cheltuielilor;
+Dreptul de a primi la începutul fiecărei luni un raport scris al veniturilor si cheltuielilor din luna precedenta realizate respectiv efectuate pentru participarea Artistului la Evenimente (Concerte);
+dreptul de a fi anunțat cu cel puțin 48 de ore înainte despre data, ora si locația unde va susține Evenimentul;
+dreptul de a incasa redevențele care i se cuvin si care provin din difuzarea înregistrărilor comerciale de către posturile de radio si TV, operatorii de cablu, cinematografe, restaurante, hoteluri, baruri, discoteci, organizatori de evenimente artistice etc. (CREDIDAM). In acest sens, Producătorul înțelege sa nu emită niciun fel de pretenție din valoarea aferenta drepturilor anterior menționate, înțelegând ca acestea nu formează obiectul cesiunii. 
+
+	7.2.2. 	OBLIGAȚIILE ARTISTULUI:
+sa respecte toate obligațiile contractate de PRODUCATOR pe seama ARTISTULUI in toate domeniile de divertisment;
+sa se prezinte la locul de desfășurare al Evenimentului cu cel puțin o ora înainte de ora stabilita pentru începerea prestației sale;
+sa susțină fiecare prestație artistica la cel mai înalt nivel artistic, sa depună toate diligentele pentru asigurarea unei imagini impecabile (aspect fizic îngrijit, ținuta de scena, ținuta de zi, tonus, alte asemenea) si sa fie la curent in permanenta cu toate tendințele in materie de muzica, dans si prezenta scenica;
+sa nu practice activități si/sau sa nu consume droguri, băuturi alcoolice sau alte substanțe care ii pun in pericol sănătatea fizica si psihica;
+sa se perfecționeze continuu din punct de vedere al vocii si al coregrafiei;
+sa nu cauzeze PRODUCĂTORULUI prejudicii materiale sau de imagine;
+sa returneze PRODUCĂTORULUI toate cheltuielile, probat a fi făcute de către acesta in interesul ARTISTULUI in situația in care PRODUCATORUL este nevoit sa rezilieze prezentul Contract din culpa Artistului;
+sa se prezinte la ședințele foto, interviurile, conferințele de presa si la orice activități pe care PRODUCATORUL le va selecta/organiza in scopul promovării Evenimentelor si/ sau a Imaginii ARTISTULUI;
+sa respecte mandatul acordat PRODUCATORULUI pe durata prezentului Contract si sa nu-l revoce, in caz contrar va datora PRODUCATORULUI, cu titlu de daune-interese, suma de 50.000 Euro la care se va adăuga si suma care va reprezenta câștigul nerealizat de către PRODUCATOR prin revocarea intempestiva si prematura a mandatului.
+in cazul in care ARTISTUL nu se poate prezenta la evenimentele contractate din motive ce nu-i pot fi imputabile (boala, accident, deces ruda de gradul I si II, forță majoră) acesta are obligația de a anunța PRODUCATORUL imediat ce situația respectiva a apărut, indicând si perioada de indisponibilitate ;
+in cazul in care va absenta neanunțat si/sau nejustificat sau in cazul in care, deși s-a prezentat, refuza nejustificat prestația artistica in cadrul Evenimentului contractat, va plăti PRODUCATORULUI, cu titlu de daune-interese, 100% din suma contractata pentru acel Eveniment, iar terților le va achita toate despăgubirile pentru prejudiciul cauzat acestora prin neîndeplinirea obligațiilor contractuale ;
+sa nu facă niciun fel de declarații in mass-media, cu privire la clauzele prezentului contract sau la condițiile derulării sale, fără acordul PRODUCATORULUI;
+sa informeze PRODUCATORUL despre orice terț care il contactează in scopul unui Eveniment sau in scopul transferării Drepturilor de Imagine;
+in apariții si in declarații publice, sa menționeze explicit numele si calitatea de impresar si de Producător al PRODUCĂTORULUI;
+ARTISTUL mandatează, in mod exclusiv, PRODUCATORUL sa efectueze orice act va fi necesar in vederea încasării de la terți a sumelor de bani care se cuvin ARTISTULUI, putând redacta, negocia si semna orice tip de contract ce are legătura cu executarea prezentului contract;
+ARTISTUL garantează PRODUCATORULUI ca nu a mai transferat drepturile care fac obiectul prezentului Contract către terțe persoane si nici nu a încheiat promisiuni de a contracta in acest sens, garantându-i PRODUCATORULUI de liniștita si netulburata posesie a drepturilor ce i-au fost transmise prin prezentul Contract.
+sa participe si sa presteze interpretarea/execuția artistica in cadrul Evenimentelor in mod personal;
+sa susțină activ PRODUCATORUL in executarea obligațiilor contractuale;
+sa pună la dispoziția PRODUCATORULUI, toate informațiile, datele si materialele necesare pentru ca PRODUCATORUL sa-si poată îndeplini obligațiile contractuale prevăzute de prezentul contract. 
+Sa se abțină de la afirmații care pot prejudicia imaginea si reputația PRODUCATORULUI atât pe parcursul derulării prezentului Contract, cat si după împlinirea termenului.
+sa nu încheie contracte de cesiune a drepturilor conexe drepturilor de autor si editare fără acordul expres prealabil si exprimat in scris al PRODUCATORULUI;
+Sa nu lanseze nicio piesa muzicala fără acordul expres prealabil si exprimat in scris al PRODUCĂTORULUI;
+Sa nu negocieze si sa nu semneze, fără acordul scris al PRODUCĂTORULUI, obținut după o prealabila informare, niciun fel de contract sau alt angajament care ar putea avea ca obiect participarea sa la Evenimente, cesiunea drepturilor conexe dreptului de autor, sponsorizarea Evenimentelor, dreptul de imagine, precum si orice alt element din cariera sa artistica. 
+sa publice pe conturile sale deținute pe rețelele de socializare materiale astfel: pe rețeaua TikTok săptămânal 4 (patru) materiale, pe rețelele Facebook si Instauram 2 (două) materiale de tip story zilnic si 3 (trei) materiale de tip postare săptămânal;
+sa respecte planul de lansare al operelor muzicale si sa posteze conținutul aferent lansării in mediul online, aprobat in prealabil cu echipa departamentului de marketing a Producătorului;
+
+ASPECTE FINANCIARE
+
+Producătorul este singurul îndreptățit sa administreze si sa încaseze veniturile rezultate in urma tuturor utilizărilor realizate conform prevederilor prezentului contract, inclusiv, dar nelimitativ la Înregistrărilor sonore si/sau a Videoclipurilor, sub orice forma s-ar face acestea.
+Veniturile încasate in urma exploatării Înregistrărilor sonore, a Videoclipurilor si a tuturor remixurilor si/sau a versiunilor derivate, in toate formele existente la momentul semnării prezentului Contract sau care vor fi descoperite in viitor, inclusiv veniturile aferente drepturilor conexe dreptului de autor cuvenite producătorilor de fonograme si videograme si veniturile aferente drepturilor conexe dreptului de autor cuvenite artiștilor interpreți sau executanți vor fi împărțite, conform Cotelor de participare, după cum urmează:
+
+Pentru Veniturile din Concerte :
+			în primii 2 ani contractuali: Întâi, se vor deduce Cheltuielile, daca acestea nu au fost asigurate de către Organizatorul de Evenimente
+Apoi, PRODUCATORUL va fi remunerat cu o sumă reprezentând un comision de {{commission.first_years.concert}} %;
+Din diferența dintre Venitul încasat si comisionul PRODUCĂTORULUI, suma rămasă se  va achita ARTISTULUI, urmând ca acesta din urma sa achite toate costurile legate de trupa, backline, tour manager, echipa tehnica, sunet, lumini, video sau orice alte costuri cu personal conex/promovare/de producție – necesare desfășurării evenimentului ;
+			În [ultimul] 1 an/i contractual/i: Întâi, se vor deduce Cheltuielile, daca acestea nu au fost asigurate de către Organizatorul de Evenimente ;
+Apoi, PRODUCĂTORUL va fi remunerat cu o sumă reprezentând un comision de {{commission.last_years.concert}}%;
+Din diferența dintre Venitul încasat si comisionul PRODUCĂTORULUI, suma rămasă se  va achita ARTISTULUI, urmând ca acesta din urma sa achite toate costurile legate de trupa, backline, tour manager, echipa tehnica, sunet, lumini, video sau orice alte costuri cu personal conex/promovare/de producție – necesare desfășurării evenimentului ;
+
+Toate plățile se vor face în maximum 10 zile lucrătoare de la data încasării onorariilor de către PRODUCATOR. Plățile se vor face in LEI la cursul BNR stipulat in Anexe la contract.
+
+Pentru drepturile conexe din interpretarea fixată a ARTISTULUI
+  {{commission.first_years.ppd}}% din PPD-ul PRODUCĂTORULUI pentru fiecare Unitate fizica, incasata si nereturnata. Nu se includ in calcul Unitățile distribuite, in mod gratuit, in scop de promovare, precum si cele comercializate la preț de cost sau mai mic;
+In cazul veniturilor obținute din EMD, din sumele nete pe care le încasează, Producătorul de la terți,  va scădea mai întâi toate cheltuielile efectuate, cum ar fi, dar fără a se limita la costuri de producție videoclip, piesa, cheltuieli efectuate pentru imaginea artistului, cheltuieli efectuate pentru promovarea pieselor, precum si altele asemenea, iar apoi va aloca Artistului un procent de  {{commission.first_years.emd}}% din venitul net încasat de PRODUCATOR de la terți;	
+{{commission.first_years.sync}}% din venitul net încasat de PRODUCATOR din sincronizare, publicitate, proiecte speciale, inserturi in publicații sau orice alte licențe, cesiuni/autorizări de drepturi acordate de PRODUCATOR terților, inclusiv din afara teritoriului României. 
+Raportarea redevențelor se face conform Art. 7.1.2. k), toate plățile se vor face în maximum 10 zile lucrătoare de la data confirmării sumelor cu ARTISTUL.
+
+Pentru drepturi din merchandising ARTIST
+{{commission.first_years.merchandising}}% din câștigul net al PRODUCĂTORULUI din comercializarea obiectelor de merchandising direct de către PRODUCĂTOR, după scăderea tuturor cheltuielilor;
+  {{commission.first_years.merchandising}}% din venitul net încasat de PRODUCATOR de la terți din cedarea drepturilor de merchandising, după scăderea tuturor cheltuielilor.
+Toate plățile se vor face în maximum 10 zile lucrătoare de la data încasării onorariilor de către PRODUCĂTOR. Plățile se vor face in LEI la cursul BNR stipulat in Anexe la contract.
+
+Pentru drepturi de Imagine ARTIST
+Contractele de imagine având ca obiect cedarea Drepturilor de Imagine ale ARTISTULUI  identificate de oricare dintre părți vor fi agreate de comun acord intre acestea, PRODUCATORUL fiind unicul îndreptățit la perfectarea acestor contracte. Împărțirea venitului net din drepturile de imagine (remunerația încasată de PRODUCĂTOR minus cheltuielile contractate si achitate de către acesta direct atribuibile respectivului contract de imagine pentru care se calculează remunerația) se împarte astfel: 
+În primii [  {{commission.first_years_count}}] ani contractuali:   {{commission.first_years.rights}}% din venitul net încasat de PRODUCĂTOR de la terti din cedarea Drepturilor de Imagine, după scăderea tuturor cheltuielilor se cuvine ARTISTULUI si [50] % se cuvine PRODUCĂTORULUI;
+În [ {{commission.last_years_count}}] an/i contractual/i:   {{commission.last_years.rights}} % din venitul net încasat de PRODUCATOR de la terți din cedarea Drepturilor de Imagine, după scăderea tuturor cheltuielilor se cuvine ARTISTULUI si [50]% se cuvine PRODUCATORULUI;
+Toate plățile se vor face în maximum 10 zile lucrătoare de la data încasării onorariilor de către PRODUCATOR. Plățile se vor face in LEI la cursul BNR stipulat in Anexe la contract.
+
+Sumele încasate de PRODUCATOR de la organismele de gestiune colectiva a drepturilor producătorilor de înregistrări sonore, precum si de la organismele de gestiune colectiva a drepturilor producătorilor de înregistrări audiovizuale se cuvin exclusiv PRODUCĂTORULUI.
+Sumele cuvenite ARTISTULUI in baza prezentului Contract sunt in cuantum brut, fiind supuse reținerilor obligatorii la sursa, conform legii in vigoare la data efectuării plaților.
+In cazul in care ARTISTUL colaborează cu alți interpreți/artiști la interpretarea unor piese muzicale, redevențele datorate ARTISTULUI vor fi diminuate in mod corespunzător cu sumele recunoscute de către PRODUCATOR (in calitate de PRODUCATOR GENERAL al proiectului artistic) celorlalți interpreți/artiști. De exemplu, daca Producătorul a decis ca ARTISTUL va interpreta o piesa muzicala alături de încă un artist, iar contribuția la interpretare a celor doi artiști va fi egala, atunci PRODUCATORUL va deconta ARTISTULUI numai 50 % din redevențele prevăzute mai sus, pe motiv ca cealaltă cota de 50% este recunoscuta celuilalt artist.
+
+
+
+
+ALTE DREPTURI CEDATE PRODUCĂTORULUI
+
+Pe durata Contractului si pentru teritoriul agreat, Artistul autorizează Producătorul sa utilizeze el însuși si sa autorizeze la rândul sau terțe persoane sa utilizeze imaginea, portretul, fotografiile, numele de scena, pseudonimul, vocea, biografia personala, a situațiilor si a evenimentelor petrecute in trecutul personal aparținând ARTISTULUI (numite “Drepturi de imagine” in cuprinsul prezentului Contract). Pentru claritate, Artistul garantează Producătorului ca nu va încheia contracte in mod direct sau prin intermediari, prin care sa isi exploateze imaginea in scop comercial, fără acordul scris al Producătorului. 
+Totodată, Artistul îl îndreptățește în mod exclusiv pe Producător să folosească interpretarea sau executarea în vederea transformărilor, adaptărilor, sincronizărilor și altele asemenea, implicate de exercitarea drepturilor patrimoniale transmise.
+Prerogativele patrimoniale cesionate în favoarea Producătorului urmează a fi interpretate în sens larg, ca incluzând orice formă sau mod de exercitare sau de exploatare, indiferent de suport material și indiferent dacă acestea există acum sau vor fi descoperite în viitor. 
+Pentru a facilita asistarea eficientă a Artistului de către Producător, Producătorul va avea dreptul deplin de a utiliza, numele, numele artistic, imaginea și altele asemenea ale Artistului. 
+Producătorul va avea pentru toata durata de protecție legala si pentru toate teritoriile lumii, dreptul de exploatare si monetizare in mediul digital a înregistrărilor sonore si/sau audiovizuale ale proiectului Artistului care formează obiectul prezentului Contract.
+Producătorul va avea dreptul, de comun acord cu artistul, sa decidă asupra repertoriului Proiectului care formează obiectul prezentului Contract, pe toata durata contractuala.
+Aceste prerogative vor fi exercitate de către Producător în mod rezonabil și cu bună-credință, doar în legătură cu cele ce fac obiectul contractului sau pentru operațiuni și raporturi similare sau conexe celor ce fac obiectul contractului, fără a-l prejudicia în acest fel pe Artist, imaginea, onorarea sau reputația acestuia.
+
+
+
+ABSENŢA RELAŢIILOR DE MUNCĂ
+
+Executarea prezentului Contract nu stabilește niciun fel de raport de muncă între Părţi, înțelegându-se că fiecare Parte îşi asumă toate obligațiile de plată a contribuţiilor sociale şi taxelor, inclusiv cele care rezultă din modificarea legislației în vigoare, în legătură cu furnizarea Serviciilor care fac obiectul acestuia.
+Prezentul Contract nu este şi nu poate fi considerat o relaţie de muncă, asociere, înfiinţare a unei societăţi comerciale, asociere, conform legislatiei articolului 1949 din Noul Codul Civil, agenţie, parteneriat sau acord similar între Părţi, astfel încât fiecare dintre Părţi este şi rămâne contractor independent. Fiecare Parte nu este şi nu va acţiona ca agent, împuternicit sau reprezentant al celeilate Părţi. Artistul este şi rămâne în permanenţă furnizor independent de servicii.
+Părţile înţeleg că activitatea care urmează să fie desfăşurată de către Artist conform prezentului Contract vor avea statutul şi vor reprezenta acţiuni ale unui prestator independent de servicii care nu este subordonat Producătorului. Artistul va fi responsabil exclusiv pentru plata taxelor relevante asupra oricăror sume de bani primite de la Producător conform Contractului cu exceptia celor prevazute la Art. 8.5 . În acest sens, executarea prezentului Contract nu poate fi considerat ca stabilind relaţii de muncă între Producător şi Artist în sensul Codului Muncii din Romania.
+
+MODIFICAREA,  ÎNCETAREA CONTRACTULUI, REZILIEREA SI DENUNTAREA UNILATERALA A CONTRACTULUI
+
+Modificarea contractului
+Orice modificare a prezentului contract este valabilă doar dacă a fost făcută în scris și a fost semnată de către reprezentanții ambelor părți.
+Moduri de încetare a contractului. Contractul încetează:
+ prin acordul părților;
+prin împlinirea duratei sale;
+prin rezilierea unilaterală a contractului de către Producător;
+prin denunțare unilaterala de către Producător cu un termen de preaviz de 30 de zile.
+ 
+Rezilierea unilaterală a contractului
+Rezilierea unilaterală a contractului poate avea loc doar la inițiativa Producătorului, în caz de neexecutare (inclusiv executare defectuoasă sau cu întârziere) fără justificare, de către Artist, a obligațiilor care îi incumbă în virtutea clauzelor contractuale. Producătorul poate uza de prerogativa rezilierii unilaterale doar pentru neexecutări (inclusiv executări defectuoase sau cu întârziere) importante din partea Artistului ale dispozițiilor menționate sau, chiar și pentru neexecutări de mică însemnătate, atunci când acestea au un caracter repetat.
+Rezilierea unilaterală operează prin notificarea Artistului cu privire la obligația sau, după caz, obligațiile nerespectate (neexecutate, executate defectuos sau cu întârziere). 
+Exercitarea, de către Producător, a prerogativei de reziliere unilaterală a contractului nu va afecta posibilitatea acestuia de a obține clauza penală sau, după caz, repararea integrală a prejudiciului suferit ca urmare a neexecutării (inclusiv a executării defectuoase sau cu întârziere) din partea Artistului.
+
+Efectele încetării contractului
+Încetarea contractului, pentru oricare dintre motivele prevăzute mai sus, produce efecte doar pentru viitor și nu va avea nicio înrâurire asupra prestațiilor deja executate sau asupra obligațiilor devenite deja scadente la data încetării. Cu titlu de exemplu, încetarea contractului nu va afecta cu nimic durata pentru care au fost cesionate deja drepturi conexe de la Artist la Producător.
+În cazul în care prezentul contract ar fi interpretat, în tot sau în parte, în anumite circumstanțe și de către autoritățile abilitate în acest sens, drept un contract de mandat, revocarea mandatului de către mandant produce efecte doar după plata, de către mandant către mandatar, a unei sume de bani egale cu clauza penală.
+Independent de motivul de încetare a contractului, ambele părți contractante vor fi ținute și pe viitor de obligația de confidențialitate ce le incumbă în virtutea acestuia. 
+
+CLAUZA PENALĂ
+În cazul denunțării unilaterale a prezentului Contract sau de neexecutare (inclusiv executare defectuoasă sau cu întârziere), de către Artist, a oricăreia dintre obligațiile care îi incumbă în virtutea prezentului contract, Producătorul este îndreptățit să pretindă de la acesta plata sumei de 50.000 EURO pentru fiecare încălcare, cu titlu de clauză penală, , cuantumul tuturor cheltuielilor efectuate de către Producător pana la momentul denunțării. În privința acestor sume, la libera sa alegere, Producătorul poate să opereze compensația cu sumele de bani pe care le datorează el însuși Artistului.
+In cazul in care Artistul săvârșește, pe parcursul perioadei contractuale, următoarele fapte: consum ilicit de droguri, prostituție, proxenetism, oferirea de servicii de videochat, infracțiuni pentru care s-a pus in mișcare acțiunea penala împotriva sa ori pentru care a fost condamnat la executarea unei pedepse privative de libertate sau cu suspendarea executării pedepsei, ori pentru care s-a dispus renunțarea la aplicarea pedepsei sau amânarea aplicării pedepsei, semnarea unor contracte de colaborare cu alte case de discuri/case de producție muzicala sau orice alte contracte de natura sa încalce mandatul exclusiv al PRODUCATORULUI, semnarea unor contracte de colaborare cu posturi TV/radio fără acordul producătorului, întârzierea/lipsa nejustificata la emisiuni TV/radio, încălcarea dispozițiilor contractuale referitoare la confidențialitate, părăsirea teritoriului României pentru o perioada mai mare de 10 (zece) zile fără înștiințarea prealabila in scris a Producătorului, aducerea la cunoștință publicului a operelor muzicale înainte de lansarea aprobata de către producător, Producătorul va avea dreptul sa considere reziliat prezentul Contract de plin drept, fără nicio notificare prealabila si fără intervenția instanței de judecata.  In caz de reziliere a Contractului pentru situațiile expuse in prezentul alineat, Artistul va plăti Producătorului suma de 50.000 EURO cu titlu de clauză penală, precum si toate cheltuielile efectuate de către Producător in executarea prezentului Contract pana la momentul rezilierii Contractului.
+Clauzele 11.1. si 11. 2.  de mai sus nu exclud și nu limitează posibilitatea Producătorului de a obține repararea integrală a prejudiciului patrimonial si/sau moral suferit ca urmare a neexecutării (inclusiv executare defectuoasă sau cu întârziere) obligațiilor din partea Artistului.
+
+ALTE CLAUZE
+
+Părțile și reprezentanții acestora garantează faptul că au abilitarea necesară semnării acestui contract și că semnătura lor angajează părțile, din punct de vedere juridic, sub toate aspectele referitoare la încheierea și executarea contractului.
+Artistul garantează că este titularul tuturor drepturilor și al tuturor prerogativelor pe care le-a cesionat Producătorului în virtutea acestui contract, inclusiv, fără a se limita la, drepturile patrimoniale conexe drepturilor de autor asupra operelor.
+Artistul garantează pe proprie răspundere că nu are obligații față de terți care să contravină sau să împiedice îndeplinirea obligațiilor decurgând din acest contract sau care să limiteze drepturile cesionate Producătorului. Cu titlu de exemplu, Artistul garantează că drepturile și prerogativele ce fac obiectul prezentului contract nu au fost și nu vor fi cedate, în tot sau în parte, unei terțe persoane, fizice sau juridice, diferite de Producător sau că folosirea, de către Producător ori de către reprezentanții săi, a numelui de artist, a imaginii ori a datelor biografice ale Artistului nu încalcă drepturile altor persoane fizice sau juridice. 
+Artistul se obligă ca, pe durata contractului, să nu mai inițieze, direct sau prin persoane interpuse, niciun raport juridic similar sau conex, prin derularea de negocieri sau prin încheierea vreunui contract sau antecontract cu un obiect de natura celui ce face obiectul prezentei, cu nicio persoană fizică sau juridică.
+Artistul garantează că singurele înregistrări sonore și fonograme pe care le va executa pe durata prezentului contract vor fi  exclusiv cele realizate de  Producător sau de catre entitățile agreate de acesta, iar nu cu terțe părți. Această garanție se extinde atât cu privire la componența (solo) și numele profesional specificat în contract, cât și cu referire la orice alt nume profesional sau formă de exercitare (de ex., ca parte a unui grup) pe care le-ar putea avea Artistul și chiar dacă înregistrarea s-ar face în folosul propriu al acestuia. Artistul poate executa si alte compoziții muzicale atât solo cat si ca parte a unui grup, in cadrul altor proiecte, cu acordul prealabil al Producătorului.
+În cazul în care, ca urmare a încălcării de către Artist a garanțiilor sau a obligațiilor ce îi incumbă în virtutea prezentului contract, Producătorul ar fi obligat, prin hotărâre judecătorească, să plătească unui terț despăgubiri, aceste despăgubiri, precum și costurile generate de o asemenea situație (incluzând, în mod nelimitativ, taxe de timbru, timbru judiciar, onorarii de avocat și/sau de expert) vor fi recuperate de către Producător de la Artist. Prezentul articol nu poate fi interpretat ca limitând celelalte prerogative de care dispune Producătorul în caz de nerespectare, de către Artist, a dispozițiilor prezentului contract.   
+
+ÎNȚELEGEREA ȘI CIRCUMSTANȚELE ÎNCHEIERII CONTRACTULUI
+
+Contractul, împreună cu eventualele sale anexe și acte adiționale, constituie întreaga înțelegere dintre părți și înlocuiește orice altă înțelegere anterioră, verbală sau scrisă, având, în tot sau în parte, același obiect.
+Prin semnarea prezentului Contract, artistul declară în mod expres faptul că a fost consiliat(ă) și că a avut deplina posibilitate de a solicita asistență juridică independentă cu privire la încheierea, interpretarea și efectele legale ale prezentului contract și că a obținut o astfel de asistență sau că s-a abținut de la a solicita acest lucru, renunțând la acest drept în mod voluntar.
+Părțile declară că toate clauzele prezentului contract au fost negociate și agreate prealabil semnării și că au avut deplina posibilitate de a formula puncte de vedere, in sens de negociere, modificare sau amendamente.
+
+
+
+
+CONFIDENȚIALITATE ȘI INTERZICEREA DEFĂIMĂRII
+
+Artistul acceptă şi înţelege, în cadrul prezentului Contract, să nu divulge şi să nu dezvăluie informaţii privind condiţiile acestuia şi informaţiile privind Producătorul, eventualele agenţii de publicitate, sponsori, colaboratori ai Producatorului şi care sunt considerate informaţii confidenţiale; să nu dezvăluie aceste informaţii, integral sau parţial, să nu declare aceste informaţii verbal, în scris, sau video pe niciun fel de platformă şi prin niciun fel de metode de comunicare, să nu dezvăluie aceste informaţii şi să păstreze confidenţialitatea acestora în orice moment şi pe o perioadă de 10 (zece) ani după expirarea prezentului, precum şi să nu dezvăluie aceste informaţii altor persoane sau entităţi. Artistul este răspunzător pentru distribuţia, utilizarea şi/sau dezvăluirea neautorizată a acestor informaţii confidenţiale, din neglijenţă sau din alte cauze.
+ Fără aprobarea scrisă a Producătorului, Artistul nu va face declaraţii pozitive sau negative în presă, la radio, televiziune şi pe internet, către terţi, instituţii şi organizaţii, cu privire la conţinutul colaborarii. De asemenea, nu va transmite aceste informaţii terţilor pe platforme de reţele sociale, oricare ar fi acestea. Mai mult, Artistul acceptă şi înţelege să nu facă declaraţii împotriva Producătorului, indiferent de motiv, fără a suporta consecinţele termenilor Contractului. Artistul acceptă şi înţelege să nu defăimeze Producătorul, indiferent de motiv şi prin orice mijloace. 
+
+PROTECȚIA DATELOR CU CARACTER PERSONAL 
+
+Părțile trebuie să respecte normele și obligațiile impuse de dispozițiile în vigoare, privind protecția datelor cu caracter personal. 
+Părțile sunt conștiente de faptul că normele europene din Regulamentul 679/2016 se aplică oricărui operator de date sau împuternicit situat în Uniunea Europeană și oricărei persoane care prelucrează date cu caracter personal ale persoanelor vizate situate în Uniunea Europeană sau care le furnizează servicii. Prin urmare, Părțile confirmă respectarea deplină a următoarelor prevederi, inclusiv dar fără a se limita la: 
+- capacitatea de a respecta drepturile persoanelor vizate privind ștergerea, corectarea sau transferul informațiilor personale 
+-  informarea în caz de breșă de date a tuturor destinatarilor relevanți, într-un interval maxim de 72 ore și, în cazul Prestatorului nu mai târziu de 24 ore de la momentul în care o astfel de încălcare a securității datelor a ajuns în atenția acestuia, 
+-   îndeplinirea tuturor îndatoririlor obligatorii privind documentarea conformării cu Regulamentul 679/2016. 
+Părțile pot utiliza datele personale ale semnatarilor în limita contractului pe care îl au încheiat, acesta fiind baza legală a prelucrării orice prelucrare suplimentară sau în alt scop face obiectul unui acord separat de prelucrare a datelor, încheiat între Părți. De asemenea perioada de stocare a datelor personale prelucrate prin contract este limitată la perioada corespondentă realizării obiectului principal al contractului. 
+Datele cu caracter personal schimbate între Părți nu pot deveni accesibile sau comunicate unor terțe părți neautorizate sau puse la dispoziție spre utilizare într-un alt mod. Prin urmare, Părțile vor lua toate măsurile tehnice și în special organizatorice necesare, în ceea ce privește obligațiile asumate prin această clauză: 
+- vor împiedica persoanele neautorizate să obțină acces la sistemele de prelucrarea datelor cu care sunt prelucrate sau utilizate datele cu caracter personal 
+- vor preveni utilizarea fără autorizație a sistemelor de prelucrare a datelor 
+- se vor asigura că persoanele care au dreptul să utilizeze un sistem de prelucrare a datelor au acces numai la datele la care au Drept de acces și că datele cu caracter personal nu pot fi citite, copiate, modificate sau eliminate fără autorizație în cursul prelucrării sau utilizării și după stocare 
+- se vor asigura că datele cu caracter personal nu pot fi citite, copiate, modificate sau eliminate fără autorizație în timpul transmiterii electronice sau transportului și că este posibil să verifice și să stabilească către care organisme se dorește să se efectueze transferul datelor cu caracter personal prin mijloace de transmitere a datelor 
+- se vor asigura că pot verifica și stabili dacă și de către cine au fost introduse, modificate sau eliminate datele cu caracter personal în/din sistemele de prelucrare a datelor 
+- se vor asigura că, în cazul unei acțiuni de prelucrare a datelor cu caracter personal, datele sunt prelucrate strict în conformitate cu prezentul contractul încheiat între Părți 
+- se vor asigura că datele cu caracter personal sunt protejate de distrugere sau pierdere accidentală 
+- se vor asigura că datele colectate în scopuri diferite pot fi prelucrate separat.
+
+
+
+
+FORȚĂ MAJORĂ
+
+Apariția unui caz de forță majora, conform prevederilor din legislația din Romania, definit ca o împrejurare externa voinței Părților, cu caracter excepțional, absolut imprevizibila si absolut invincibila (cum ar fi, dar fără a se limita la: cutremure, incendii, inundații, conflicte armate, accidente, îmbolnăvire) si ale cărei consecințe determina întârzierea realizării obiectului Contractului, va conduce la suspendarea efectelor prezentului contract. Starea precara de sănătate/boala trebuie sa fie certificata de către un medic specialist indicat de către Producător. Într-o asemenea situație, părțile vor decide in legătura cu menținerea sau încetarea contractului.
+
+CESIONARE
+
+Părţile sunt de acord că Producătorul are dreptul de a cesiona, integral sau parţial, drepturile şi obligaţiile care îi revin conform prezentului Contract unui terţ fără notificarea prealabilă a Artistului si  fără nicio limitare. Artistul nu are dreptul de a cesiona în totalitate sau parţial drepturile sale care decurg din prezentul contract.
+
+NOTIFICĂRI
+
+Toate notificările, avertizările sau comunicările legate de prezentul Contract vor fi redactate în limba romana şi vor fi transmise de către una din Părţi celeilalte în scris, personal şi prin curier sau prin poştă cu confirmare de primire, la adresele menţionate în prezentul Contract sau la orice altă adresă menţionată de către una din Părţi celeilalte cu cel puţin 10 (zece) zile calendaristice în avans.
+
+LEGEA APLICABILĂ ŞI INSTANŢA COMPETENTĂ
+
+Toate conflictele şi neînţelegerile care derivă din sau în legătură cu prezentul Contract, care nu pot fi, în prealabil soluţionate de către Părţi pe calea amiabila, după discuţii de bună credinţă în încercarea de a găsi o soluţie cu privire la interpretarea, executarea şi punerea în aplicare a prezentului Contract, se vor supune în mod expres jurisdicţiei legii aplicabile şi instanţelor competente din Bucuresti renunţând în mod expres la dreptul de a apela la o altă jurisdicţie competentă în virtutea domiciliului lor prezent sau viitor, sau din orice altă cauză.
+
+	Prezentul Contract s-a încheiat astăzi {{today}}, în 2 (două) exemplare originale, câte unul pentru fiecare parte.
+
+PRODUCĂTOR                                                                     			ARTIST
+{{maincompany.name}}						 	{{entity.full_name}}
+Prin  {{maincompany.admin_name}}
+{{maincompany.admin_role}}
+

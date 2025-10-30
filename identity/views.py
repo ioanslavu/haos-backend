@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from api.permissions import CanRevealSensitiveIdentity
 from django_filters import rest_framework as django_filters
 from django.utils import timezone
 from django.db.models import Q, Count
@@ -213,9 +214,19 @@ class SensitiveIdentityViewSet(viewsets.ModelViewSet):
         """Filter to only PF entities."""
         return super().get_queryset().select_related('entity')
 
-    @action(detail=True, methods=['post'])
+    # Admin/superuser or users with 'identity.reveal_sensitive_identity'
+    # may reveal sensitive fields. Serializer remains masked by default.
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, CanRevealSensitiveIdentity])
     def reveal_cnp(self, request, pk=None):
-        """Reveal the full CNP with audit logging."""
+        """
+        Reveal the full CNP with audit logging.
+
+        Authorization strategy (scalable):
+        - Superusers, platform administrators, and users granted the
+          Django permission 'identity.reveal_sensitive_identity' are allowed.
+        - This supports future departments (e.g., Legal/Finance) by
+          assigning that permission to their groups — no code changes needed.
+        """
         sensitive_identity = self.get_object()
         serializer = SensitiveIdentityRevealSerializer(data=request.data)
 

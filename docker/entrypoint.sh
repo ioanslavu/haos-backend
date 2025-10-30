@@ -5,6 +5,46 @@ set -euo pipefail
 : "${DJANGO_MANAGE_CMD:=python manage.py}"
 : "${BIND_ADDR:=0.0.0.0:8000}"
 
+require_var() {
+  local name="$1"; shift
+  local val="${!name:-}"
+  if [ -z "$val" ]; then
+    echo "[entrypoint][FATAL] Missing required env: $name" >&2
+    exit 1
+  fi
+}
+
+preflight_prod_checks() {
+  # Treat anything other than explicit 'true' as production
+  if [ "${DEBUG:-false}" = "true" ] || [ "${DEBUG:-false}" = "True" ]; then
+    echo "[entrypoint] DEBUG=true detected. Skipping production preflight checks."
+    return 0
+  fi
+
+  echo "[entrypoint] Running production preflight checks..."
+  require_var DJANGO_SECRET_KEY
+  require_var FIELD_ENCRYPTION_KEY
+  require_var DB_NAME
+  require_var DB_USER
+  require_var DB_PASSWORD
+  require_var DB_HOST
+  require_var ALLOWED_HOSTS
+  require_var CSRF_TRUSTED_ORIGINS
+  require_var DROPBOX_SIGN_WEBHOOK_SECRET
+  require_var DROPBOX_SIGN_API_KEY
+
+  # Service account file should exist and be readable in prod
+  SA_FILE="${GOOGLE_SERVICE_ACCOUNT_FILE:-}"
+  if [ -z "$SA_FILE" ] || [ ! -r "$SA_FILE" ]; then
+    echo "[entrypoint][FATAL] GOOGLE_SERVICE_ACCOUNT_FILE not set or not readable: '$SA_FILE'" >&2
+    exit 1
+  fi
+
+  echo "[entrypoint] Preflight checks passed."
+}
+
+preflight_prod_checks
+
 echo "[entrypoint] Waiting for database ${DB_HOST:-db}:${DB_PORT:-5432}..."
 for i in $(seq 1 60); do
   if nc -z "${DB_HOST:-db}" "${DB_PORT:-5432}" >/dev/null 2>&1; then

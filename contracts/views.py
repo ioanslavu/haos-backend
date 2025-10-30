@@ -7,6 +7,8 @@ from django.utils import timezone
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
+from django.conf import settings
+import logging
 
 from .models import ContractTemplate, ContractTemplateVersion, Contract, ContractSignature, ContractTerms, ShareType, ContractShare
 from .serializers import (
@@ -181,8 +183,16 @@ class ContractTemplateViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to import template")
+
+            if settings.DEBUG:
+                error_message = f'Failed to import template: {str(e)}'
+            else:
+                error_message = 'An error occurred while importing the template. Please try again or contact support.'
+
             return Response(
-                {'error': f'Failed to import template: {str(e)}'},
+                {'error': error_message},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -200,8 +210,16 @@ class ContractTemplateViewSet(viewsets.ModelViewSet):
             documents = drive_service.search_documents(query=query, limit=limit)
             return Response({'documents': documents})
         except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to search documents")
+
+            if settings.DEBUG:
+                error_message = f'Failed to search documents: {str(e)}'
+            else:
+                error_message = 'An error occurred while searching for documents. Please try again or contact support.'
+
             return Response(
-                {'error': f'Failed to search documents: {str(e)}'},
+                {'error': error_message},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -219,8 +237,16 @@ class ContractTemplateViewSet(viewsets.ModelViewSet):
             folders = drive_service.search_folders(query=query, limit=limit)
             return Response({'folders': folders})
         except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to search folders")
+
+            if settings.DEBUG:
+                error_message = f'Failed to search folders: {str(e)}'
+            else:
+                error_message = 'An error occurred while searching for folders. Please try again or contact support.'
+
             return Response(
-                {'error': f'Failed to search folders: {str(e)}'},
+                {'error': error_message},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -268,16 +294,35 @@ class ContractViewSet(viewsets.ModelViewSet):
                         department=prof.department,
                         can_view=True,
                     ).values_list('contract_type', flat=True)
+                    # Only show contracts from user's department (removed department__isnull vulnerability)
                     queryset = queryset.filter(
-                        models.Q(department__isnull=True) | models.Q(department=prof.department),
-                        models.Q(contract_type__isnull=True) | models.Q(contract_type__in=list(allowed_types))
+                        models.Q(department=prof.department) &
+                        (models.Q(contract_type__isnull=True) | models.Q(contract_type__in=list(allowed_types)))
                     )
-                except Exception:
-                    # Fallback if policy table not available: only department scoping
-                    queryset = queryset.filter(
-                        models.Q(department__isnull=True) | models.Q(department=prof.department)
-                    )
+                except Exception as e:
+                    # Log the error properly instead of silently catching
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error filtering contracts by policy: {str(e)}")
+                    # Fallback: only show user's department contracts
+                    queryset = queryset.filter(department=prof.department)
         return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a single contract with RBAC object-level permission check.
+        """
+        contract = self.get_object()
+
+        # RBAC: require can_view unless admin
+        user = request.user
+        prof = getattr(user, 'profile', None)
+        is_admin = getattr(user, 'is_superuser', False) or (prof and prof.role == 'administrator')
+        if not is_admin and not ContractsRBAC(user).can_view(contract):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to view this contract")
+
+        serializer = self.get_serializer(contract)
+        return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         """
@@ -371,7 +416,12 @@ class ContractViewSet(viewsets.ModelViewSet):
         placeholder_values = serializer.validated_data['placeholder_values']
 
         logger.info(f"Generating contract from template {template_id}")
-        logger.info(f"Placeholder values received: {placeholder_values}")
+        # Avoid logging raw placeholder values (may contain PII). Log count and keys at DEBUG only.
+        try:
+            placeholder_keys = list(placeholder_values.keys())
+        except Exception:
+            placeholder_keys = []
+        logger.debug(f"Placeholder keys received ({len(placeholder_keys)}): {placeholder_keys}")
 
         template = ContractTemplate.objects.get(id=template_id)
         logger.info(f"Template placeholders defined: {template.placeholders}")
@@ -385,7 +435,22 @@ class ContractViewSet(viewsets.ModelViewSet):
         # User placeholders take precedence
         all_placeholders = {}
         all_placeholders.update(company_placeholders)
-        all_placeholders.update(placeholder_values)
+
+        # Sanitize user-provided placeholder values
+        from rest_framework.exceptions import ValidationError
+        sanitized_values = {}
+        if len(placeholder_values) > 300:
+            raise ValidationError("Maximum 300 placeholders allowed")
+
+        for key, value in placeholder_values.items():
+            if isinstance(value, str):
+                # Strip dangerous characters and limit length
+                sanitized_value = value.replace('<', '').replace('>', '').replace('{', '').replace('}', '').replace('[', '').replace(']', '')
+                sanitized_values[key] = sanitized_value[:2500]
+            else:
+                sanitized_values[key] = value
+
+        all_placeholders.update(sanitized_values)
 
         logger.info(f"Total placeholders: {len(all_placeholders)} (company: {len(company_placeholders)}, user: {len(placeholder_values)})")
 
@@ -455,11 +520,33 @@ class ContractViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Sanitize placeholder values
+        from rest_framework.exceptions import ValidationError
+        sanitized_values = {}
+        if len(placeholder_values) > 300:
+            return Response(
+                {'error': 'Maximum 300 placeholders allowed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        for key, value in placeholder_values.items():
+            if isinstance(value, str):
+                # Strip dangerous characters and limit length
+                sanitized_value = value.replace('<', '').replace('>', '').replace('{', '').replace('}', '').replace('[', '').replace(']', '')
+                sanitized_values[key] = sanitized_value[:2500]
+            else:
+                sanitized_values[key] = value
+
         logger.info(f"Regenerating contract {contract.id}")
-        logger.info(f"New placeholder values: {placeholder_values}")
+        # Avoid logging raw placeholder values; log keys at DEBUG level only.
+        try:
+            new_keys = list(sanitized_values.keys())
+        except Exception:
+            new_keys = []
+        logger.debug(f"New placeholder keys ({len(new_keys)}): {new_keys}")
 
         # Start async task
-        task = regenerate_contract_async.delay(contract.id, placeholder_values)
+        task = regenerate_contract_async.delay(contract.id, sanitized_values)
 
         # Update contract status and task ID
         contract.celery_task_id = task.id
@@ -514,8 +601,16 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to make contract public")
+
+            if settings.DEBUG:
+                error_message = f'Failed to make contract public: {str(e)}'
+            else:
+                error_message = 'An error occurred while making the contract public. Please try again or contact support.'
+
             return Response(
-                {'error': f'Failed to make contract public: {str(e)}'},
+                {'error': error_message},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -651,10 +746,222 @@ class ContractViewSet(viewsets.ModelViewSet):
             })
 
         except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to get signature status")
+
+            if settings.DEBUG:
+                error_message = f'Failed to get signature status: {str(e)}'
+            else:
+                error_message = 'An error occurred while retrieving signature status. Please try again or contact support.'
+
             return Response(
-                {'error': f'Failed to get signature status: {str(e)}'},
+                {'error': error_message},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=True, methods=['get'])
+    def audit_trail(self, request, pk=None):
+        """
+        Get complete audit trail for a contract.
+        Combines data from django-auditlog, WebhookEvent, and signatures.
+        """
+        from auditlog.models import LogEntry
+        from django.contrib.contenttypes.models import ContentType
+        from .models import WebhookEvent
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        contract = self.get_object()
+        events = []
+
+        # ========================================================================
+        # Collect events from django-auditlog (Contract changes)
+        # ========================================================================
+        try:
+            contract_ct = ContentType.objects.get_for_model(Contract)
+            log_entries = LogEntry.objects.filter(
+                content_type=contract_ct,
+                object_id=contract.id
+            ).order_by('timestamp')
+
+            for entry in log_entries:
+                actor_email = entry.actor.email if entry.actor else 'System'
+
+                # Parse changes
+                changes_dict = {}
+                description_parts = []
+
+                if entry.changes:
+                    import json
+                    try:
+                        changes_data = json.loads(entry.changes) if isinstance(entry.changes, str) else entry.changes
+                        for field, change in changes_data.items():
+                            if isinstance(change, list) and len(change) == 2:
+                                old_val, new_val = change
+                                changes_dict[field] = {'old': old_val, 'new': new_val}
+
+                                # Build human-readable description
+                                if field == 'status':
+                                    description_parts.append(f"Status changed from '{old_val}' to '{new_val}'")
+                                elif field == 'signed_at':
+                                    description_parts.append(f"Contract signed")
+                                elif field == 'is_public':
+                                    if new_val:
+                                        description_parts.append("Contract made public")
+                                    else:
+                                        description_parts.append("Contract made private")
+                                else:
+                                    description_parts.append(f"{field.replace('_', ' ').title()} updated")
+                    except:
+                        pass
+
+                description = ' | '.join(description_parts) if description_parts else f"Contract {entry.action}"
+
+                events.append({
+                    'timestamp': entry.timestamp,
+                    'event_type': f'contract_{entry.action}',
+                    'event_category': 'contract',
+                    'actor': actor_email,
+                    'description': description,
+                    'changes': changes_dict if changes_dict else None,
+                    'metadata': {
+                        'action': entry.action,
+                        'remote_addr': entry.remote_addr
+                    },
+                    'source': 'auditlog'
+                })
+        except Exception as e:
+            logger.error(f"Error fetching auditlog entries: {str(e)}")
+
+        # ========================================================================
+        # Collect events from WebhookEvent (Dropbox Sign webhooks)
+        # ========================================================================
+        try:
+            webhook_events = WebhookEvent.objects.filter(
+                contract=contract
+            ).order_by('received_at')
+
+            for webhook in webhook_events:
+                # Determine description based on event type
+                if webhook.event_type == 'signature_request_all_signed':
+                    description = "All signers completed - Contract fully signed"
+                elif webhook.event_type == 'signature_request_signed':
+                    signer = webhook.signer_email or 'Unknown signer'
+                    description = f"Signed by {signer}"
+                elif webhook.event_type == 'signature_request_viewed':
+                    signer = webhook.signer_email or 'Unknown signer'
+                    description = f"Viewed by {signer}"
+                elif webhook.event_type == 'signature_request_declined':
+                    signer = webhook.signer_email or 'Unknown signer'
+                    description = f"Declined by {signer}"
+                elif webhook.event_type == 'signature_request_sent':
+                    description = "Signature request sent to signers"
+                else:
+                    description = f"Webhook event: {webhook.event_type}"
+
+                events.append({
+                    'timestamp': webhook.received_at,
+                    'event_type': webhook.event_type,
+                    'event_category': 'webhook',
+                    'actor': webhook.signer_email or 'Dropbox Sign',
+                    'description': description,
+                    'changes': None,
+                    'metadata': {
+                        'verified_with_api': webhook.verified_with_api,
+                        'processed': webhook.processed,
+                        'client_ip': webhook.client_ip,
+                        'error_message': webhook.error_message if webhook.error_message else None
+                    },
+                    'source': 'webhook'
+                })
+        except Exception as e:
+            logger.error(f"Error fetching webhook events: {str(e)}")
+
+        # ========================================================================
+        # Collect events from ContractSignature changes (auditlog)
+        # ========================================================================
+        try:
+            signature_ct = ContentType.objects.get_for_model(ContractSignature)
+            signature_ids = contract.signatures.values_list('id', flat=True)
+
+            signature_log_entries = LogEntry.objects.filter(
+                content_type=signature_ct,
+                object_id__in=signature_ids
+            ).order_by('timestamp')
+
+            for entry in signature_log_entries:
+                # Get the signature to find signer email
+                try:
+                    signature = ContractSignature.objects.get(id=entry.object_id)
+                    signer_email = signature.signer_email
+                except:
+                    signer_email = 'Unknown signer'
+
+                description_parts = []
+                changes_dict = {}
+
+                if entry.changes:
+                    import json
+                    try:
+                        changes_data = json.loads(entry.changes) if isinstance(entry.changes, str) else entry.changes
+                        for field, change in changes_data.items():
+                            if isinstance(change, list) and len(change) == 2:
+                                old_val, new_val = change
+                                changes_dict[field] = {'old': old_val, 'new': new_val}
+
+                                if field == 'status':
+                                    description_parts.append(f"{signer_email}: Status '{old_val}' → '{new_val}'")
+                                elif field == 'signed_at' and new_val:
+                                    description_parts.append(f"{signer_email}: Signed")
+                                elif field == 'viewed_at' and new_val:
+                                    description_parts.append(f"{signer_email}: Viewed")
+                                elif field == 'declined_at' and new_val:
+                                    description_parts.append(f"{signer_email}: Declined")
+                    except:
+                        pass
+
+                description = ' | '.join(description_parts) if description_parts else f"Signature updated for {signer_email}"
+
+                events.append({
+                    'timestamp': entry.timestamp,
+                    'event_type': f'signature_{entry.action}',
+                    'event_category': 'signature',
+                    'actor': signer_email,
+                    'description': description,
+                    'changes': changes_dict if changes_dict else None,
+                    'metadata': {
+                        'action': entry.action
+                    },
+                    'source': 'auditlog'
+                })
+        except Exception as e:
+            logger.error(f"Error fetching signature log entries: {str(e)}")
+
+        # ========================================================================
+        # Sort all events by timestamp
+        # ========================================================================
+        events.sort(key=lambda x: x['timestamp'])
+
+        # ========================================================================
+        # Build summary statistics
+        # ========================================================================
+        summary = {
+            'total_events': len(events),
+            'contract_changes': len([e for e in events if e['event_category'] == 'contract']),
+            'webhook_events': len([e for e in events if e['event_category'] == 'webhook']),
+            'signature_events': len([e for e in events if e['event_category'] == 'signature']),
+            'unique_actors': len(set(e['actor'] for e in events if e['actor'])),
+        }
+
+        # Return combined audit trail
+        return Response({
+            'contract_id': contract.id,
+            'contract_number': contract.contract_number,
+            'current_status': contract.status,
+            'events': events,
+            'summary': summary
+        })
 
     @action(detail=False, methods=['post'])
     def generate_with_terms(self, request):
@@ -744,8 +1051,21 @@ class ContractViewSet(viewsets.ModelViewSet):
         for share in contract.shares.all():
             placeholders.update(share.get_placeholder_values())
 
-        # Apply manual overrides last
-        placeholders.update(placeholder_overrides)
+        # Sanitize and apply manual overrides last
+        from rest_framework.exceptions import ValidationError
+        sanitized_overrides = {}
+        if len(placeholder_overrides) > 300:
+            raise ValidationError("Maximum 300 placeholder overrides allowed")
+
+        for key, value in placeholder_overrides.items():
+            if isinstance(value, str):
+                # Strip dangerous characters and limit length
+                sanitized_value = value.replace('<', '').replace('>', '').replace('{', '').replace('}', '').replace('[', '').replace(']', '')
+                sanitized_overrides[key] = sanitized_value[:2500]
+            else:
+                sanitized_overrides[key] = value
+
+        placeholders.update(sanitized_overrides)
 
         logger.info(f"Collected {len(placeholders)} placeholders for contract generation")
         logger.info(f"Placeholder keys: {list(placeholders.keys())}")
@@ -982,46 +1302,68 @@ class ContractViewSet(viewsets.ModelViewSet):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def dropbox_sign_webhook(request):
+def dropbox_sign_webhook(request, secret_token):
     """
-    Webhook endpoint for Dropbox Sign callbacks.
+    SECURED webhook endpoint for Dropbox Sign callbacks.
 
-    This endpoint receives events from Dropbox Sign when signature status changes.
-    No authentication required - webhooks are verified using the event hash.
+    Security Layers:
+    1. Secret URL token (obfuscation)
+    2. Dropbox signature verification (cryptographic auth)
+    3. Idempotency check (prevent replay attacks)
+    4. Server-to-server API verification (authoritative source)
+    5. Business logic validation (state machine)
+    6. Audit logging (forensics)
 
     Configure this URL in your Dropbox Sign account settings:
-    https://your-domain.com/api/v1/contracts/webhook/dropbox-sign/
+    https://your-domain.com/api/v1/contracts/webhook/dropbox-sign/YOUR_SECRET_TOKEN/
     """
     import logging
     import json
     from dropbox_sign import EventCallbackRequest, EventCallbackHelper
     from decouple import config
+    from .models import Contract, ContractSignature, WebhookEvent
+    from .webhook_utils import (
+        get_client_ip,
+        calculate_event_hash,
+        validate_status_transition,
+        verify_event_with_dropbox_api
+    )
 
     logger = logging.getLogger(__name__)
+
+    # ========================================================================
+    # LAYER 1: Secret URL Token Validation
+    # ========================================================================
+    expected_token = config('DROPBOX_SIGN_WEBHOOK_SECRET', default='')
+    if not expected_token or secret_token != expected_token:
+        # Return 404 to make endpoint appear non-existent (stealth security)
+        logger.warning(f"Invalid webhook token from IP: {get_client_ip(request)}")
+        return HttpResponse("Not Found", status=404)
+
+    logger.info(f"Webhook request from IP: {get_client_ip(request)}")
 
     try:
         # Get API key from settings
         api_key = config('DROPBOX_SIGN_API_KEY')
 
-        # Parse callback data - Dropbox Sign sends JSON in a form parameter called "json"
+        # ========================================================================
+        # LAYER 2: Parse Webhook Payload
+        # ========================================================================
+        # Dropbox Sign sends JSON in a form parameter called "json"
         if request.POST and 'json' in request.POST:
-            # Form-encoded JSON (most common from Dropbox Sign)
             callback_data = json.loads(request.POST['json'])
         elif hasattr(request, 'data') and request.data:
-            # DRF parsed data
             callback_data = request.data
         elif request.body:
-            # Raw JSON body
             try:
                 callback_data = json.loads(request.body.decode('utf-8'))
-            except:
-                callback_data = {}
+            except Exception as e:
+                logger.error(f"Failed to parse JSON body: {str(e)}")
+                return HttpResponse("Bad Request", status=400)
         else:
             callback_data = {}
 
         logger.info(f"Received Dropbox Sign webhook")
-        logger.debug(f"Callback data type: {type(callback_data)}")
-        logger.debug(f"Callback data: {callback_data}")
 
         # Check if it's a test ping or empty callback
         if not callback_data or 'event' not in callback_data:
@@ -1033,45 +1375,138 @@ def dropbox_sign_webhook(request):
             callback_event = EventCallbackRequest.init(callback_data)
         except Exception as e:
             logger.error(f"Failed to parse callback event: {str(e)}")
-            logger.error(f"Raw callback data: {callback_data}")
-            return HttpResponse("Hello API Event Received", status=200)
+            return HttpResponse("Bad Request", status=400)
 
-        # Verify callback authenticity
+        # ========================================================================
+        # LAYER 3: Dropbox Signature Verification (MANDATORY - NO BYPASS!)
+        # ========================================================================
         try:
             if not EventCallbackHelper.is_valid(api_key, callback_event):
-                logger.warning("Invalid Dropbox Sign webhook - signature verification failed")
-                return HttpResponse("Invalid signature", status=400)
+                logger.error(f"SECURITY: Invalid Dropbox Sign signature from IP {get_client_ip(request)}")
+                return HttpResponse("Unauthorized", status=401)
         except Exception as e:
-            logger.warning(f"Signature verification failed: {str(e)}")
-            # Continue anyway for testing - remove this in production
-            pass
+            # NEVER bypass signature verification!
+            logger.error(f"SECURITY: Signature verification failed: {str(e)}")
+            return HttpResponse("Unauthorized", status=401)
 
         # Get event details
         event = callback_event.event
         if not event:
             logger.warning("No event in callback")
-            return HttpResponse("Hello API Event Received", status=200)
+            return HttpResponse("Bad Request", status=400)
 
         event_type = event.event_type
-
-        logger.info(f"Processing Dropbox Sign event: {event_type}")
-
-        # Get signature request data
         signature_request = callback_event.signature_request
+
         if not signature_request:
             logger.warning("No signature request in callback")
-            return HttpResponse("Hello API Event Received", status=200)
+            return HttpResponse("Bad Request", status=400)
 
         signature_request_id = signature_request.signature_request_id
 
-        # Find contract by signature request ID
+        # Extract signer email if available
+        signer_email = None
+        if event.event_metadata and hasattr(event.event_metadata, 'related_signature_id'):
+            related_signature_id = event.event_metadata.related_signature_id
+            for sig in signature_request.signatures:
+                if hasattr(sig, 'signature_id') and sig.signature_id == related_signature_id:
+                    signer_email = getattr(sig, 'signer_email_address', None)
+                    break
+
+        logger.info(f"Processing event: {event_type} for request {signature_request_id}")
+
+        # ========================================================================
+        # LAYER 4: Idempotency Check (Prevent Replay Attacks)
+        # ========================================================================
+        event_hash = calculate_event_hash(signature_request_id, event_type, signer_email)
+
+        # Check if this event was already processed
+        existing_event = WebhookEvent.objects.filter(event_hash=event_hash).first()
+        if existing_event and existing_event.processed:
+            logger.info(f"Event already processed: {event_hash}")
+            return HttpResponse("Hello API Event Received", status=200)
+
+        # Find contract
         try:
             contract = Contract.objects.get(dropbox_sign_request_id=signature_request_id)
         except Contract.DoesNotExist:
             logger.warning(f"Contract not found for signature request: {signature_request_id}")
+            # Still create webhook event for audit trail
+            WebhookEvent.objects.create(
+                contract=None,
+                event_type=event_type,
+                signature_request_id=signature_request_id,
+                signer_email=signer_email,
+                event_hash=event_hash,
+                raw_payload=callback_data,
+                client_ip=get_client_ip(request),
+                processed=False,
+                error_message="Contract not found"
+            )
             return HttpResponse("Hello API Event Received", status=200)
 
-        # Update contract based on event type
+        # Create WebhookEvent record (processed=False initially)
+        webhook_event = WebhookEvent.objects.create(
+            contract=contract,
+            event_type=event_type,
+            signature_request_id=signature_request_id,
+            signer_email=signer_email,
+            event_hash=event_hash,
+            raw_payload=callback_data,
+            client_ip=get_client_ip(request),
+            processed=False
+        )
+
+        # ========================================================================
+        # LAYER 5: Server-to-Server Verification (AUTHORITATIVE SOURCE!)
+        # ========================================================================
+        logger.info(f"Verifying event with Dropbox Sign API...")
+        is_valid, api_response, error = verify_event_with_dropbox_api(
+            signature_request_id,
+            event_type,
+            signer_email
+        )
+
+        webhook_event.api_verification_attempts += 1
+        webhook_event.verified_with_api = is_valid
+
+        if api_response:
+            # Store API response for forensics
+            webhook_event.verification_result = {
+                'is_complete': getattr(api_response, 'is_complete', None),
+                'has_error': getattr(api_response, 'has_error', None),
+                'verified_at': timezone.now().isoformat()
+            }
+
+        if not is_valid:
+            webhook_event.error_message = f"API verification failed: {error}"
+            webhook_event.save()
+            logger.error(f"SECURITY: API verification failed for {event_type}: {error}")
+            return HttpResponse("Verification Failed", status=500)
+
+        logger.info(f"API verification SUCCESS for {event_type}")
+
+        # ========================================================================
+        # LAYER 6: Business Logic Validation & State Update
+        # ========================================================================
+        # Determine new status based on event type
+        new_status = contract.status  # Default: no change
+
+        if event_type == 'signature_request_all_signed':
+            new_status = 'signed'
+        elif event_type == 'signature_request_declined':
+            new_status = 'cancelled'
+
+        # Validate status transition
+        if new_status != contract.status:
+            is_valid_transition, transition_error = validate_status_transition(contract.status, new_status)
+            if not is_valid_transition:
+                webhook_event.error_message = f"Invalid transition: {transition_error}"
+                webhook_event.save()
+                logger.error(f"SECURITY: {transition_error}")
+                return HttpResponse("Invalid State Transition", status=400)
+
+        # Apply state changes based on event type
         if event_type == 'signature_request_all_signed':
             logger.info(f"Contract {contract.id} fully signed")
             contract.status = 'signed'
@@ -1088,21 +1523,14 @@ def dropbox_sign_webhook(request):
             logger.info(f"Signature received for contract {contract.id}")
 
             # Update specific signer
-            if event.event_metadata and hasattr(event.event_metadata, 'related_signature_id'):
-                related_signature_id = event.event_metadata.related_signature_id
-
-                # Find matching signature in our records by email
-                for sig in signature_request.signatures:
-                    if hasattr(sig, 'signature_id') and sig.signature_id == related_signature_id:
-                        ContractSignature.objects.filter(
-                            contract=contract,
-                            signer_email=sig.signer_email_address
-                        ).update(
-                            status='signed',
-                            signed_at=timezone.now(),
-                            dropbox_sign_signature_id=sig.signature_id
-                        )
-                        break
+            if signer_email:
+                ContractSignature.objects.filter(
+                    contract=contract,
+                    signer_email=signer_email
+                ).update(
+                    status='signed',
+                    signed_at=timezone.now()
+                )
 
             # Check if all signers have signed
             total_signers = contract.signatures.count()
@@ -1120,19 +1548,13 @@ def dropbox_sign_webhook(request):
             logger.info(f"Contract {contract.id} viewed by signer")
 
             # Update specific signer viewed status
-            if event.event_metadata and hasattr(event.event_metadata, 'related_signature_id'):
-                related_signature_id = event.event_metadata.related_signature_id
-
-                for sig in signature_request.signatures:
-                    if hasattr(sig, 'signature_id') and sig.signature_id == related_signature_id:
-                        ContractSignature.objects.filter(
-                            contract=contract,
-                            signer_email=sig.signer_email_address
-                        ).update(
-                            viewed_at=timezone.now(),
-                            dropbox_sign_signature_id=sig.signature_id
-                        )
-                        break
+            if signer_email:
+                ContractSignature.objects.filter(
+                    contract=contract,
+                    signer_email=signer_email
+                ).update(
+                    viewed_at=timezone.now()
+                )
 
         elif event_type == 'signature_request_declined':
             logger.info(f"Contract {contract.id} declined by signer")
@@ -1140,20 +1562,14 @@ def dropbox_sign_webhook(request):
             contract.save()
 
             # Update specific signer
-            if event.event_metadata and hasattr(event.event_metadata, 'related_signature_id'):
-                related_signature_id = event.event_metadata.related_signature_id
-
-                for sig in signature_request.signatures:
-                    if hasattr(sig, 'signature_id') and sig.signature_id == related_signature_id:
-                        ContractSignature.objects.filter(
-                            contract=contract,
-                            signer_email=sig.signer_email_address
-                        ).update(
-                            status='declined',
-                            declined_at=timezone.now(),
-                            dropbox_sign_signature_id=sig.signature_id
-                        )
-                        break
+            if signer_email:
+                ContractSignature.objects.filter(
+                    contract=contract,
+                    signer_email=signer_email
+                ).update(
+                    status='declined',
+                    declined_at=timezone.now()
+                )
 
         elif event_type == 'signature_request_sent':
             logger.info(f"Contract {contract.id} signature request sent")
@@ -1161,6 +1577,14 @@ def dropbox_sign_webhook(request):
 
         else:
             logger.info(f"Unhandled event type: {event_type}")
+
+        # ========================================================================
+        # Mark webhook event as successfully processed
+        # ========================================================================
+        webhook_event.processed = True
+        webhook_event.save()
+
+        logger.info(f"Webhook event processed successfully: {event_hash}")
 
         # Return success response (required by Dropbox Sign)
         return HttpResponse("Hello API Event Received", status=200)

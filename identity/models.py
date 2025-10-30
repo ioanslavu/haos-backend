@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from cryptography.fernet import Fernet
 from django.conf import settings
 import json
+from django.utils import timezone
+from .policies import SensitiveAccessPolicy  # Ensure model is registered with the app
 
 User = get_user_model()
 
@@ -210,6 +212,10 @@ class Entity(models.Model):
         if self.display_name:
             placeholders['entity.name'] = self.display_name
             placeholders['entity.full_name'] = self.display_name
+
+        # Gender (for gender placeholders)
+        if self.kind == 'PF' and self.gender:
+            placeholders['entity.gender'] = self.gender
 
         # Additional name fields (PF only, but use entity.* prefix)
         if self.kind == 'PF':
@@ -593,6 +599,17 @@ class SensitiveIdentity(models.Model):
     class Meta:
         verbose_name = "Sensitive Identity"
         verbose_name_plural = "Sensitive Identities"
+        # Custom Django permission used to authorize sensitive data reveal
+        # via view-level permission checks. This enables future roles/departments
+        # (e.g., legal_manager, finance_manager) to be granted this capability
+        # without code changes — simply assign the permission to their groups.
+        permissions = [
+            ("reveal_sensitive_identity", "Can reveal sensitive identity information"),
+        ]
+
+
+# NOTE: The SensitiveAccessPolicy model is defined at module end to avoid
+# interfering with the SensitiveIdentity class body below.
 
     def clean(self):
         """Validate that entity is PF and required fields based on identification type."""

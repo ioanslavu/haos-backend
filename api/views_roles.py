@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from .permissions import IsAdminOrSuperuser
 from rest_framework import status
 from .models import UserProfile
 
@@ -102,6 +103,13 @@ class RoleUsersView(APIView):
 
 class RolePermissionsView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'roles_admin'
+
+    def get_permissions(self):
+        # All methods on this view are admin/superuser only
+        if self.request.method in ["GET", "POST", "DELETE"]:
+            return [IsAuthenticated(), IsAdminOrSuperuser()]
+        return super().get_permissions()
 
     def _resolve_role(self, role_id):
         idx_map = _role_index_map()
