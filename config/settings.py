@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'sequences',
     'impersonate',  # User impersonation for role testing
     'auditlog',  # Audit trail for model changes
+    'channels',  # WebSocket support
 
     # Allauth
     'allauth',
@@ -65,6 +66,8 @@ INSTALLED_APPS = [
     'rights',
     'distribution',
     'campaigns',
+    'crm_extensions',
+    'notifications',
 ]
 
 SITE_ID = 1
@@ -76,7 +79,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'impersonate.middleware.ImpersonateMiddleware',  # Must be after AuthenticationMiddleware
+    'api.middleware.ImpersonationMiddleware',  # Custom impersonation - must be after AuthenticationMiddleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
@@ -100,6 +103,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
@@ -394,6 +398,23 @@ CELERY_ENABLE_UTC = True
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 CELERY_WORKER_LOG_FORMAT = '[%(asctime)s: %(levelname)s/%(processName)s] %(message)s'
 CELERY_WORKER_TASK_LOG_FORMAT = '[%(asctime)s: %(levelname)s/%(processName)s] [%(task_name)s(%(task_id)s)] %(message)s'
+
+
+# ===================================================
+# CHANNELS CONFIGURATION (WebSocket Support)
+# ===================================================
+
+# Use Redis as channel layer backend (same Redis as Celery)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [config('CELERY_BROKER_URL', default='redis://localhost:6379/0')],
+            "capacity": 1500,  # Maximum number of messages in a channel
+            "expiry": 10,  # How long a message stays in the channel (seconds)
+        },
+    },
+}
 
 
 # ===================================================

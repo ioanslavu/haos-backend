@@ -9,7 +9,7 @@ from .models import (
 class EntityRoleInline(admin.TabularInline):
     model = EntityRole
     extra = 1
-    fields = ['role', 'primary_role']
+    fields = ['role', 'primary_role', 'is_internal']
 
 
 class IdentifierInline(admin.TabularInline):
@@ -74,8 +74,8 @@ class EntityAdmin(admin.ModelAdmin):
 
 @admin.register(EntityRole)
 class EntityRoleAdmin(admin.ModelAdmin):
-    list_display = ['entity', 'role', 'primary_role', 'created_at']
-    list_filter = ['role', 'primary_role', 'created_at']
+    list_display = ['entity', 'role', 'primary_role', 'is_internal', 'created_at']
+    list_filter = ['role', 'primary_role', 'is_internal', 'created_at']
     search_fields = ['entity__display_name']
     autocomplete_fields = ['entity']
 

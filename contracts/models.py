@@ -137,14 +137,10 @@ class Contract(models.Model):
     ]
 
     # Department ownership for access control (nullable for legacy rows)
-    DEPARTMENT_CHOICES = [
-        ('digital', 'Digital'),
-        ('sales', 'Sales'),
-    ]
-
-    department = models.CharField(
-        max_length=50,
-        choices=DEPARTMENT_CHOICES,
+    department = models.ForeignKey(
+        'api.Department',
+        on_delete=models.PROTECT,
+        related_name='contracts',
         blank=True,
         null=True,
         help_text="Owning department for access control"

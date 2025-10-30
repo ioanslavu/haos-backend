@@ -17,6 +17,7 @@ from .serializers import (
 from identity.models import Identifier
 from rights.models import Credit, Split
 from distribution.models import Publication
+from api.permissions import IsNotGuest
 
 
 class WorkFilter(django_filters.FilterSet):
@@ -97,10 +98,13 @@ class WorkFilter(django_filters.FilterSet):
 
 
 class WorkViewSet(viewsets.ModelViewSet):
-    """ViewSet for Work model."""
+    """
+    ViewSet for Work model.
+    Access: All authenticated users except guests can view works.
+    """
 
     queryset = Work.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotGuest]
     filterset_class = WorkFilter
     filter_backends = [
         django_filters.DjangoFilterBackend,
@@ -249,10 +253,14 @@ class RecordingFilter(django_filters.FilterSet):
 
 
 class RecordingViewSet(viewsets.ModelViewSet):
-    """ViewSet for Recording model."""
+    """
+    ViewSet for Recording model.
+    Access: All authenticated users except guests can view recordings.
+    Data shown is filtered by department (campaigns, etc.).
+    """
 
     queryset = Recording.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotGuest]
     filterset_class = RecordingFilter
     filter_backends = [
         django_filters.DjangoFilterBackend,
@@ -371,6 +379,49 @@ class RecordingViewSet(viewsets.ModelViewSet):
         from distribution.serializers import PublicationListSerializer
         serializer = PublicationListSerializer(publications, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def relationships(self, request, pk=None):
+        """
+        Get department-filtered relationships for this recording.
+        Shows campaigns filtered by user's department access.
+
+        Access rules:
+        - Admins: See all campaigns
+        - Managers: See campaigns from their department
+        - Employees: See campaigns where they are handlers
+        """
+        recording = self.get_object()
+        profile = request.user.profile
+
+        # Filter campaigns by department/role
+        from campaigns.models import Campaign
+
+        if profile.is_admin:
+            # Admins see all campaigns
+            campaigns = recording.campaigns.all()
+        elif profile.is_manager:
+            # Managers see campaigns from their department
+            campaigns = recording.campaigns.filter(department=profile.department)
+        else:
+            # Employees see only campaigns they're assigned to
+            campaigns = recording.campaigns.filter(
+                handlers__user=request.user
+            ).distinct()
+
+        # Serialize
+        from campaigns.serializers import CampaignListSerializer
+        campaign_data = CampaignListSerializer(campaigns, many=True).data
+
+        return Response({
+            'recording': {
+                'id': recording.id,
+                'title': recording.title,
+                'type': recording.type,
+            },
+            'campaigns': campaign_data,
+            'campaigns_count': len(campaign_data),
+        })
 
 
 class ReleaseFilter(django_filters.FilterSet):

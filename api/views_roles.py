@@ -6,60 +6,85 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdminOrSuperuser
 from rest_framework import status
-from .models import UserProfile
+from .models import UserProfile, Role
 
 User = get_user_model()
 
 
-def _role_index_map():
-    return {code: idx + 1 for idx, (code, _name) in enumerate(UserProfile.ROLE_CHOICES)}
-
-
 class RolesListView(APIView):
+    """
+    List all roles from the database with user counts and permission counts.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        idx_map = _role_index_map()
-        roles = []
-        for code, name in UserProfile.ROLE_CHOICES:
-            count = User.objects.filter(profile__role=code).count()
-            roles.append({
-                'id': idx_map[code],
-                'name': code,
+        roles = Role.objects.all().select_related('department').order_by('level', 'name')
+        roles_data = []
+        for role in roles:
+            # Get user count for this role
+            count = role.users.count()
+            # Get permission count from associated group
+            group, _ = Group.objects.get_or_create(name=role.code)
+            perm_count = group.permissions.count()
+
+            roles_data.append({
+                'id': role.id,
+                'code': role.code,
+                'name': role.name,
+                'level': role.level,
+                'department': role.department.code if role.department else None,
+                'department_name': role.department.name if role.department else None,
+                'is_system_role': role.is_system_role,
+                'is_active': role.is_active,
                 'user_count': count,
-                'permission_count': 0,
+                'permission_count': perm_count,
             })
-        return Response(roles)
+        return Response(roles_data)
 
     def post(self, request):
-        # Creating new roles not supported with fixed role choices
-        return Response({'error': 'Creating roles is not supported'}, status=status.HTTP_400_BAD_REQUEST)
+        # Creating new roles should be done via the role management API
+        return Response({
+            'error': 'Use /api/v1/roles/management/ endpoint to create new roles'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RoleDetailView(APIView):
+    """
+    Get details of a specific role including users and permissions.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, role_id):
-        idx_map = _role_index_map()
-        reverse = {v: k for k, v in idx_map.items()}
-        code = reverse.get(int(role_id))
-        if not code:
+        try:
+            role = Role.objects.select_related('department').get(id=role_id)
+        except Role.DoesNotExist:
             return Response({'error': 'Role not found'}, status=status.HTTP_404_NOT_FOUND)
-        users = User.objects.filter(profile__role=code).select_related('profile')
+
+        # Get users with this role
+        users = User.objects.filter(profile__role=role).select_related('profile__department')
         users_data = [{
             'id': u.id,
             'email': u.email,
-            'full_name': f"{u.first_name} {u.last_name}".strip(),
-            'department': getattr(getattr(u, 'profile', None), 'department', None),
+            'full_name': f"{u.first_name} {u.last_name}".strip() or u.email,
+            'department': u.profile.department.code if u.profile.department else None,
+            'department_name': u.profile.department.name if u.profile.department else None,
         } for u in users]
+
         # Group-backed permissions
-        group, _ = Group.objects.get_or_create(name=code)
+        group, _ = Group.objects.get_or_create(name=role.code)
         perms = group.permissions.select_related('content_type').all()
 
         return Response({
-            'id': role_id,
-            'name': code,
-            'user_count': users.count(),
+            'id': role.id,
+            'code': role.code,
+            'name': role.name,
+            'level': role.level,
+            'description': role.description,
+            'department': role.department.code if role.department else None,
+            'department_name': role.department.name if role.department else None,
+            'is_system_role': role.is_system_role,
+            'is_active': role.is_active,
+            'user_count': len(users_data),
             'permission_count': perms.count(),
             'permissions': [
                 {
@@ -75,33 +100,44 @@ class RoleDetailView(APIView):
         })
 
     def patch(self, request, role_id):
-        return Response({'error': 'Editing role names is not supported'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'error': 'Use /api/v1/roles/management/<id>/ endpoint to edit roles'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, role_id):
-        return Response({'error': 'Deleting roles is not supported'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'error': 'Use /api/v1/roles/management/<id>/ endpoint to delete roles'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RoleUsersView(APIView):
+    """
+    List all users with a specific role.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, role_id):
-        idx_map = _role_index_map()
-        reverse = {v: k for k, v in idx_map.items()}
-        code = reverse.get(int(role_id))
-        if not code:
+        try:
+            role = Role.objects.get(id=role_id)
+        except Role.DoesNotExist:
             return Response({'error': 'Role not found'}, status=status.HTTP_404_NOT_FOUND)
-        qs = User.objects.filter(profile__role=code).select_related('profile')
+
+        users = User.objects.filter(profile__role=role).select_related('profile__department')
         data = [{
             'id': u.id,
             'email': u.email,
             'first_name': u.first_name,
             'last_name': u.last_name,
-            'department': getattr(getattr(u, 'profile', None), 'department', None),
-        } for u in qs]
+            'department': u.profile.department.code if u.profile.department else None,
+            'department_name': u.profile.department.name if u.profile.department else None,
+        } for u in users]
         return Response(data)
 
 
 class RolePermissionsView(APIView):
+    """
+    Manage permissions for a specific role (admin only).
+    """
     permission_classes = [IsAuthenticated]
     throttle_scope = 'roles_admin'
 
@@ -112,17 +148,18 @@ class RolePermissionsView(APIView):
         return super().get_permissions()
 
     def _resolve_role(self, role_id):
-        idx_map = _role_index_map()
-        reverse = {v: k for k, v in idx_map.items()}
-        code = reverse.get(int(role_id))
-        if not code:
+        """Get role and associated group from database."""
+        try:
+            role = Role.objects.get(id=role_id)
+            group, _ = Group.objects.get_or_create(name=role.code)
+            return role, group
+        except Role.DoesNotExist:
             return None, None
-        group, _ = Group.objects.get_or_create(name=code)
-        return code, group
 
     def get(self, request, role_id):
-        code, group = self._resolve_role(role_id)
-        if not code:
+        """List all permissions for a role."""
+        role, group = self._resolve_role(role_id)
+        if not role:
             return Response({'error': 'Role not found'}, status=status.HTTP_404_NOT_FOUND)
         perms = group.permissions.select_related('content_type').all()
         return Response([
@@ -137,9 +174,11 @@ class RolePermissionsView(APIView):
         ])
 
     def post(self, request, role_id):
-        code, group = self._resolve_role(role_id)
-        if not code:
+        """Add, set, or remove permissions for a role."""
+        role, group = self._resolve_role(role_id)
+        if not role:
             return Response({'error': 'Role not found'}, status=status.HTTP_404_NOT_FOUND)
+
         action = request.data.get('action')
         perm_ids = request.data.get('permissions') or []
         perm_codenames = request.data.get('permission_codenames') or []
@@ -167,8 +206,9 @@ class RolePermissionsView(APIView):
         return Response({'status': 'ok'})
 
     def delete(self, request, role_id):
-        code, group = self._resolve_role(role_id)
-        if not code:
+        """Clear all permissions for a role."""
+        role, group = self._resolve_role(role_id)
+        if not role:
             return Response({'error': 'Role not found'}, status=status.HTTP_404_NOT_FOUND)
         group.permissions.clear()
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from api.permissions import CanRevealSensitiveIdentity
+from api.permissions import CanRevealSensitiveIdentity, IsNotGuest
 from django_filters import rest_framework as django_filters
 from django.utils import timezone
 from django.db.models import Q, Count
@@ -24,6 +24,7 @@ class EntityFilter(django_filters.FilterSet):
 
     kind = django_filters.ChoiceFilter(choices=Entity.KIND_CHOICES)
     has_role = django_filters.CharFilter(method='filter_has_role')
+    is_internal = django_filters.BooleanFilter(method='filter_is_internal')
     search = django_filters.CharFilter(method='filter_search')
     created_after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
     created_before = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='lte')
@@ -36,6 +37,10 @@ class EntityFilter(django_filters.FilterSet):
         """Filter entities by role."""
         return queryset.filter(entity_roles__role=value).distinct()
 
+    def filter_is_internal(self, queryset, name, value):
+        """Filter entities by internal/external status."""
+        return queryset.filter(entity_roles__is_internal=value).distinct()
+
     def filter_search(self, queryset, name, value):
         """Search entities by name, email, or phone."""
         return queryset.filter(
@@ -46,10 +51,15 @@ class EntityFilter(django_filters.FilterSet):
 
 
 class EntityViewSet(viewsets.ModelViewSet):
-    """ViewSet for Entity model."""
+    """
+    ViewSet for Entity model.
+
+    Access: All authenticated users except guests can view entities.
+    Data shown is filtered by department (campaigns, contact persons, etc.).
+    """
 
     queryset = Entity.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotGuest]
     filterset_class = EntityFilter
     filter_backends = [
         django_filters.DjangoFilterBackend,
@@ -128,6 +138,29 @@ class EntityViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
+    def business(self, request):
+        """
+        Get all entities with any business role.
+        Used for both client and brand searches in campaigns.
+
+        Business roles include: client, brand, label, booking, endorsements,
+        publishing, productie, new_business, digital.
+        """
+        business_roles = [
+            'client', 'brand', 'label', 'booking', 'endorsements',
+            'publishing', 'productie', 'new_business', 'digital'
+        ]
+        queryset = self.get_queryset().filter(
+            entity_roles__role__in=business_roles
+        ).distinct()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = EntityListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = EntityListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get entity statistics."""
         stats = {
@@ -150,23 +183,112 @@ class EntityViewSet(viewsets.ModelViewSet):
         return Response(stats)
 
     @action(detail=True, methods=['get'])
+    def relationships(self, request, pk=None):
+        """
+        Get department-filtered campaigns and contracts for this entity.
+
+        Access rules:
+        - Admins: See all campaigns and contracts across all departments
+        - Managers: See all campaigns and contracts for their department
+        - Employees: See only campaigns and contracts they created or are assigned to
+        - Guests: No access
+        """
+        entity = self.get_object()
+        user = request.user
+        profile = user.profile
+
+        # Import here to avoid circular imports
+        from campaigns.models import Campaign
+        from contracts.models import Contract
+
+        # Base querysets
+        campaigns_queryset = Campaign.objects.filter(entity=entity)
+        contracts_queryset = Contract.objects.filter(counterparty_entity=entity)
+
+        # Apply department filtering based on role level
+        if profile.is_admin:
+            # Admins see everything
+            pass
+        elif profile.is_manager:
+            # Managers see all data for their department
+            if profile.department:
+                campaigns_queryset = campaigns_queryset.filter(department=profile.department)
+                contracts_queryset = contracts_queryset.filter(department=profile.department)
+            else:
+                # Manager without department sees nothing
+                campaigns_queryset = campaigns_queryset.none()
+                contracts_queryset = contracts_queryset.none()
+        else:
+            # Employees and guests see only their own data
+            if profile.department:
+                campaigns_queryset = campaigns_queryset.filter(
+                    department=profile.department,
+                    created_by=user
+                )
+                contracts_queryset = contracts_queryset.filter(
+                    department=profile.department,
+                    created_by=user
+                )
+            else:
+                # No department = no access
+                campaigns_queryset = campaigns_queryset.none()
+                contracts_queryset = contracts_queryset.none()
+
+        # Order and select related
+        campaigns = campaigns_queryset.select_related('created_by', 'department').order_by('-created_at')
+        contracts = contracts_queryset.select_related('created_by', 'department').order_by('-created_at')
+
+        # Serialize data
+        from campaigns.serializers import CampaignSerializer
+        from contracts.serializers import ContractSerializer
+
+        return Response({
+            'entity_id': entity.id,
+            'entity_name': entity.display_name,
+            'user_department': profile.department.code if profile.department else None,
+            'user_role': profile.role_code,
+            'campaigns': CampaignSerializer(campaigns, many=True, context={'request': request}).data,
+            'contracts': ContractSerializer(contracts, many=True, context={'request': request}).data,
+        })
+
+    @action(detail=True, methods=['get'])
     def latest_contract_shares(self, request, pk=None):
         """
         Get the latest contract shares for this entity.
         Optionally filter by contract_type.
         Used for auto-populating contract generation forms.
+        Now respects department filtering.
         """
         from contracts.models import Contract, ContractShare
         from contracts.serializers import ContractShareSerializer
 
         entity = self.get_object()
+        user = request.user
+        profile = user.profile
         contract_type = request.query_params.get('contract_type')
 
-        # Find latest contract for this entity
+        # Find latest contract for this entity with department filtering
         query = Contract.objects.filter(
             counterparty_entity=entity,
             status__in=['signed', 'draft']
         )
+
+        # Apply department filtering
+        if profile.is_admin:
+            # Admins see all contracts
+            pass
+        elif profile.is_manager:
+            # Managers see their department's contracts
+            if profile.department:
+                query = query.filter(department=profile.department)
+            else:
+                query = query.none()
+        else:
+            # Employees see only their own contracts
+            if profile.department:
+                query = query.filter(department=profile.department, created_by=user)
+            else:
+                query = query.none()
 
         if contract_type:
             query = query.filter(contract_type=contract_type)
@@ -403,10 +525,17 @@ class ClientCompatibilityViewSet(EntityViewSet):
         return ClientCompatibilitySerializer
 
     def get_queryset(self):
-        """Filter to entities that could be clients."""
+        """
+        Filter to entities with any business role.
+        Business roles include: client, brand, label, booking, endorsements,
+        publishing, productie, new_business, digital.
+        """
+        business_roles = [
+            'client', 'brand', 'label', 'booking', 'endorsements',
+            'publishing', 'productie', 'new_business', 'digital'
+        ]
         return Entity.objects.filter(
-            Q(entity_roles__role='client') |
-            Q(entity_roles__role='artist')
+            entity_roles__role__in=business_roles
         ).distinct()
 
 

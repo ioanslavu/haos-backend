@@ -6,29 +6,96 @@ from django.dispatch import receiver
 User = get_user_model()
 
 
+class Department(models.Model):
+    """
+    Department model for organizational structure.
+    Replaces hardcoded DEPARTMENT_CHOICES.
+    """
+    code = models.SlugField(
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text="Unique department code (e.g., 'digital', 'sales', 'publishing')"
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text="Display name for the department"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Optional description of the department"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this department is active"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Department"
+        verbose_name_plural = "Departments"
+        ordering = ['code']
+
+    def __str__(self):
+        return self.name
+
+
+class Role(models.Model):
+    """
+    Role model for user roles.
+    Replaces hardcoded ROLE_CHOICES.
+    """
+    code = models.SlugField(
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text="Unique role code (e.g., 'digital_manager', 'administrator')"
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text="Display name for the role"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Optional description of the role"
+    )
+    level = models.IntegerField(
+        db_index=True,
+        help_text="Role hierarchy level: 100=guest, 200=employee, 300=manager, 1000=admin"
+    )
+    department = models.ForeignKey(
+        'Department',
+        on_delete=models.PROTECT,
+        related_name='roles',
+        null=True,
+        blank=True,
+        help_text="If set, this role can only be assigned to users in this specific department"
+    )
+    is_system_role = models.BooleanField(
+        default=False,
+        help_text="System roles cannot be deleted via UI"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this role is active and assignable"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Role"
+        verbose_name_plural = "Roles"
+        ordering = ['level', 'code']
+
+    def __str__(self):
+        return self.name
+
+
 class UserProfile(models.Model):
     """
     User profile to extend Django User with role-based access control.
     """
-
-    # Role choices
-    ROLE_CHOICES = [
-        ('guest', 'Guest'),
-        ('administrator', 'Administrator'),
-        ('digital_manager', 'Digital Manager'),
-        ('digital_employee', 'Digital Employee'),
-        ('sales_manager', 'Sales Manager'),
-        ('sales_employee', 'Sales Employee'),
-    ]
-
-    # Department choices
-    DEPARTMENT_CHOICES = [
-        (None, 'None'),
-        ('digital', 'Digital'),
-        ('sales', 'Sales'),
-        # New department added for sensitive data access policies
-        ('legal', 'Legal'),
-    ]
 
     user = models.OneToOneField(
         User,
@@ -36,21 +103,20 @@ class UserProfile(models.Model):
         related_name='profile'
     )
 
-    role = models.CharField(
-        max_length=50,
-        choices=ROLE_CHOICES,
-        default='guest',
-        db_index=True,
-        help_text="User role for access control"
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.PROTECT,
+        related_name='users',
+        help_text="User's role in the system"
     )
 
-    department = models.CharField(
-        max_length=50,
-        choices=DEPARTMENT_CHOICES,
-        blank=True,
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT,
+        related_name='users',
         null=True,
-        db_index=True,
-        help_text="Department: Digital or Sales"
+        blank=True,
+        help_text="User's department (employees/managers require department)"
     )
 
     profile_picture = models.ImageField(
@@ -78,28 +144,44 @@ class UserProfile(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user.email} - {self.get_role_display()}"
+        return f"{self.user.email} - {self.role.name if self.role else 'No Role'}"
+
+    # Backward compatibility properties
+    @property
+    def role_code(self):
+        """Returns role code for backward compatibility."""
+        return self.role.code if self.role else 'guest'
 
     @property
+    def department_code(self):
+        """Returns department code for backward compatibility."""
+        return self.department.code if self.department else None
+
+    # Role hierarchy checks
+    @property
     def is_admin(self):
-        return self.role == 'administrator'
+        """Check if user is administrator (level >= 1000)."""
+        return self.role and self.role.level >= 1000
 
     @property
     def is_manager(self):
-        return self.role in ['digital_manager', 'sales_manager']
+        """Check if user is manager (level >= 300)."""
+        return self.role and self.role.level >= 300
 
     @property
     def is_employee(self):
-        return self.role in ['digital_employee', 'sales_employee']
+        """Check if user is employee (level 200-299)."""
+        return self.role and 200 <= self.role.level < 300
 
     @property
     def is_guest(self):
-        return self.role == 'guest'
+        """Check if user is guest (level < 200)."""
+        return self.role and self.role.level < 200
 
     @property
     def has_department_access(self):
-        """Check if user has department access (not guest)."""
-        return self.role != 'guest' and self.department is not None
+        """Check if user has department access (not guest and has department)."""
+        return not self.is_guest and self.department is not None
 
 
 class DepartmentRequest(models.Model):
@@ -186,7 +268,13 @@ def create_user_profile(sender, instance, created, **kwargs):
     Default role is 'guest'.
     """
     if created:
-        UserProfile.objects.create(user=instance, role='guest')
+        try:
+            guest_role = Role.objects.get(code='guest')
+            UserProfile.objects.create(user=instance, role=guest_role)
+        except Role.DoesNotExist:
+            # During migrations or if guest role doesn't exist yet
+            # Skip profile creation - it will be handled manually
+            pass
 
 
 @receiver(post_save, sender=User)

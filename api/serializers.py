@@ -1,19 +1,80 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import CompanySettings, UserProfile, DepartmentRequest
+from .models import CompanySettings, UserProfile, DepartmentRequest, Department, Role
 
 User = get_user_model()
 
 
+class DepartmentSerializer(serializers.ModelSerializer):
+    """Serializer for Department model."""
+    user_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Department
+        fields = [
+            'id',
+            'code',
+            'name',
+            'description',
+            'is_active',
+            'user_count',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_user_count(self, obj):
+        """Return count of users in this department."""
+        return obj.users.count() if hasattr(obj, 'users') else 0
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    """Serializer for Role model."""
+    department_detail = DepartmentSerializer(source='department', read_only=True)
+    user_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Role
+        fields = [
+            'id',
+            'code',
+            'name',
+            'description',
+            'level',
+            'department',
+            'department_detail',
+            'is_system_role',
+            'is_active',
+            'user_count',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_user_count(self, obj):
+        """Return count of users with this role."""
+        return obj.users.count() if hasattr(obj, 'users') else 0
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for UserProfile model."""
+    role_detail = RoleSerializer(source='role', read_only=True)
+    department_detail = DepartmentSerializer(source='department', read_only=True)
+
+    # For backward compatibility and easier access
+    role_code = serializers.CharField(source='role.code', read_only=True)
+    department_code = serializers.CharField(source='department.code', read_only=True, allow_null=True)
 
     class Meta:
         model = UserProfile
         fields = [
             'id',
             'role',
+            'role_detail',
+            'role_code',
             'department',
+            'department_detail',
+            'department_code',
             'profile_picture',
             'setup_completed',
             'created_at',
@@ -26,8 +87,10 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model with profile information."""
 
     profile = UserProfileSerializer(read_only=True)
-    role = serializers.CharField(source='profile.role', read_only=True)
-    department = serializers.CharField(source='profile.department', read_only=True)
+    role = serializers.CharField(source='profile.role_code', read_only=True)
+    role_detail = RoleSerializer(source='profile.role', read_only=True)
+    department = serializers.CharField(source='profile.department_code', read_only=True, allow_null=True)
+    department_detail = DepartmentSerializer(source='profile.department', read_only=True)
     profile_picture = serializers.ImageField(source='profile.profile_picture', read_only=True)
     setup_completed = serializers.BooleanField(source='profile.setup_completed', read_only=True)
 
@@ -42,7 +105,9 @@ class UserSerializer(serializers.ModelSerializer):
             'date_joined',
             'profile',
             'role',
+            'role_detail',
             'department',
+            'department_detail',
             'profile_picture',
             'setup_completed',
         ]
@@ -84,29 +149,45 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 class UserRoleUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user role and department (admin only)."""
 
+    role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.filter(is_active=True))
+    department = serializers.PrimaryKeyRelatedField(
+        queryset=Department.objects.filter(is_active=True),
+        allow_null=True,
+        required=False
+    )
+
     class Meta:
         model = UserProfile
         fields = ['role', 'department']
 
     def validate(self, data):
         """
-        Auto-assign department based on role.
+        Validate role and department compatibility.
 
-        Department assignment rules:
-        - digital_manager, digital_employee → digital department
-        - sales_manager, sales_employee → sales department
-        - administrator → no specific department (can oversee all)
-        - guest → no department
+        Rules:
+        - If role has a specific department restriction, user must be assigned to that department
+        - Employees and managers (level 200-999) must have a department
+        - Guest and admin (level <200 or >=1000) don't require department
         """
         role = data.get('role', self.instance.role if self.instance else None)
+        department = data.get('department', self.instance.department if self.instance else None)
 
-        # Auto-assign department based on role
-        if role in ['digital_manager', 'digital_employee']:
-            data['department'] = 'digital'
-        elif role in ['sales_manager', 'sales_employee']:
-            data['department'] = 'sales'
-        elif role in ['administrator', 'guest']:
-            data['department'] = None
+        if role:
+            # Check if role is restricted to specific department
+            if role.department:
+                if department != role.department:
+                    data['department'] = role.department
+            else:
+                # Role has no department restriction
+                # Check if this role level requires a department
+                if 200 <= role.level < 1000:
+                    if not department:
+                        raise serializers.ValidationError({
+                            'department': f"Role '{role.name}' (level {role.level}) requires a department to be assigned."
+                        })
+                else:
+                    # Guest or Admin - no department required
+                    pass
 
         return data
 

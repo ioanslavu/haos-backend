@@ -41,6 +41,10 @@ drf-orjson-renderer
 celery
 redis
 
+# WebSocket Support for Real-time Notifications
+channels[daphne]
+channels-redis
+
 
 # ===================================================
 # Contracts & Document Management

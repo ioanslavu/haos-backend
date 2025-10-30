@@ -3,7 +3,8 @@ from rest_framework import permissions
 
 class IsAdministrator(permissions.BasePermission):
     """
-    Permission to check if user is an Administrator.
+    Permission to check if user is an Administrator (level >= 1000).
+    Uses the role hierarchy system.
     """
 
     def has_permission(self, request, view):
@@ -11,13 +12,14 @@ class IsAdministrator(permissions.BasePermission):
             request.user and
             request.user.is_authenticated and
             hasattr(request.user, 'profile') and
-            request.user.profile.role == 'administrator'
+            request.user.profile.is_admin
         )
 
 
 class IsAdministratorOrManager(permissions.BasePermission):
     """
-    Permission to check if user is an Administrator or Manager.
+    Permission to check if user is an Administrator or Manager (level >= 300).
+    Uses the role hierarchy system.
     """
 
     def has_permission(self, request, view):
@@ -25,17 +27,13 @@ class IsAdministratorOrManager(permissions.BasePermission):
             request.user and
             request.user.is_authenticated and
             hasattr(request.user, 'profile') and
-            request.user.profile.role in [
-                'administrator',
-                'digital_manager',
-                'sales_manager'
-            ]
+            request.user.profile.is_manager
         )
 
 
 class IsNotGuest(permissions.BasePermission):
     """
-    Permission to check if user is not a guest (has department access).
+    Permission to check if user is not a guest (level > 100).
     """
 
     def has_permission(self, request, view):
@@ -43,28 +41,43 @@ class IsNotGuest(permissions.BasePermission):
             request.user and
             request.user.is_authenticated and
             hasattr(request.user, 'profile') and
-            request.user.profile.role != 'guest'
+            request.user.profile.role and
+            request.user.profile.role.level > 100
         )
 
 
 class HasDepartmentAccess(permissions.BasePermission):
     """
     Permission to check if user has department access.
+    Superusers and staff always have access.
     """
 
     def has_permission(self, request, view):
-        return (
-            request.user and
-            request.user.is_authenticated and
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if not request.user or not request.user.is_authenticated:
+            logger.warning(f"HasDepartmentAccess: User not authenticated")
+            return False
+
+        # Superusers and staff always have access
+        if request.user.is_superuser or request.user.is_staff:
+            logger.info(f"HasDepartmentAccess: Allowing {request.user.email} (superuser={request.user.is_superuser}, staff={request.user.is_staff})")
+            return True
+
+        # Check department access for regular users
+        has_access = (
             hasattr(request.user, 'profile') and
             request.user.profile.has_department_access
         )
+        logger.warning(f"HasDepartmentAccess: User {request.user.email} has_access={has_access}")
+        return has_access
 
 
 class IsAdminOrSuperuser(permissions.BasePermission):
     """
-    Allow only platform administrators (profile.role == 'administrator')
-    or Django superusers.
+    Allow only platform administrators (level >= 1000) or Django superusers.
+    Uses the role hierarchy system.
     """
 
     def has_permission(self, request, view):
@@ -74,14 +87,15 @@ class IsAdminOrSuperuser(permissions.BasePermission):
         if getattr(user, 'is_superuser', False):
             return True
         prof = getattr(user, 'profile', None)
-        return bool(prof and getattr(prof, 'role', None) == 'administrator')
+        return bool(prof and prof.is_admin)
 
 
 class IsSelfOrAdmin(permissions.BasePermission):
     """
     Allow access if the target user in the URL is the authenticated user,
-    or if the requester is an admin/superuser.
+    or if the requester is an admin/superuser (level >= 1000).
     Expects a `user_id` kwarg in the view's URL pattern.
+    Uses the role hierarchy system.
     """
 
     def has_permission(self, request, view):
@@ -93,7 +107,7 @@ class IsSelfOrAdmin(permissions.BasePermission):
         if getattr(user, 'is_superuser', False):
             return True
         prof = getattr(user, 'profile', None)
-        if prof and getattr(prof, 'role', None) == 'administrator':
+        if prof and prof.is_admin:
             return True
 
         # Self-access only
@@ -109,13 +123,13 @@ class CanRevealSensitiveIdentity(permissions.BasePermission):
     Gatekeeper for revealing sensitive identity (e.g., CNP/passport).
 
     Source of truth:
-    - Superusers and platform administrators (profile.role == 'administrator')
-      are always allowed.
+    - Superusers and platform administrators (level >= 1000) are always allowed.
     - Otherwise, authorization is driven by DB policies in
       identity.SensitiveAccessPolicy (department + role + field).
 
     This design avoids dependency on Django Groups/Admin, and lets
     operators change access via a CLI without code changes or redeploys.
+    Uses the role hierarchy system.
     """
 
     def has_permission(self, request, view):
@@ -125,7 +139,7 @@ class CanRevealSensitiveIdentity(permissions.BasePermission):
         if getattr(user, 'is_superuser', False):
             return True
         prof = getattr(user, 'profile', None)
-        if prof and getattr(prof, 'role', None) == 'administrator':
+        if prof and prof.is_admin:
             return True
 
         # Policy-driven check: department + role must be explicitly allowed

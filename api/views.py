@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, generics
 from django.contrib.auth import get_user_model
-from .models import CompanySettings, UserProfile, DepartmentRequest
+from .models import CompanySettings, UserProfile, DepartmentRequest, Department, Role
 from .serializers import (
     CompanySettingsSerializer,
     UserSerializer,
@@ -19,6 +19,8 @@ from .serializers import (
     DepartmentRequestSerializer,
     DepartmentRequestCreateSerializer,
     DepartmentRequestReviewSerializer,
+    DepartmentSerializer,
+    RoleSerializer,
 )
 from .permissions import (
     IsAdministrator,
@@ -42,7 +44,9 @@ def auth_status(request):
     if request.user.is_authenticated:
         # Ensure profile exists
         if not hasattr(request.user, 'profile'):
-            UserProfile.objects.create(user=request.user, role='guest')
+            from .models import Role
+            guest_role = Role.objects.get(code='guest')
+            UserProfile.objects.create(user=request.user, role=guest_role)
 
         profile = request.user.profile
 
@@ -53,8 +57,19 @@ def auth_status(request):
                 'email': request.user.email,
                 'first_name': request.user.first_name,
                 'last_name': request.user.last_name,
-                'role': profile.role,
-                'department': profile.department,
+                'role': profile.role_code,
+                'role_detail': {
+                    'id': profile.role.id,
+                    'code': profile.role.code,
+                    'name': profile.role.name,
+                    'level': profile.role.level,
+                } if profile.role else None,
+                'department': profile.department_code,
+                'department_detail': {
+                    'id': profile.department.id,
+                    'code': profile.department.code,
+                    'name': profile.department.name,
+                } if profile.department else None,
                 'profile_picture': request.build_absolute_uri(profile.profile_picture.url) if profile.profile_picture else None,
                 'setup_completed': profile.setup_completed,
             },
@@ -460,3 +475,77 @@ class PendingRequestsCountView(APIView):
             count = 0
 
         return Response({'count': count})
+
+
+# ============================================
+# DEPARTMENT MANAGEMENT ENDPOINTS
+# ============================================
+
+class DepartmentListView(generics.ListCreateAPIView):
+    """
+    List all departments or create a new department (admin only).
+    """
+    permission_classes = [IsAuthenticated, IsAdministrator]
+    queryset = Department.objects.all().order_by('name')
+    serializer_class = DepartmentSerializer
+
+
+class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update, or delete a department (admin only).
+    """
+    permission_classes = [IsAuthenticated, IsAdministrator]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    lookup_field = 'pk'
+
+    def perform_destroy(self, instance):
+        """Prevent deletion if department has users or is used in roles."""
+        if instance.users.exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                f"Cannot delete department '{instance.name}' because it has {instance.users.count()} users assigned."
+            )
+        if instance.roles.exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                f"Cannot delete department '{instance.name}' because it has {instance.roles.count()} roles."
+            )
+        instance.delete()
+
+
+# ============================================
+# ROLE MANAGEMENT ENDPOINTS
+# ============================================
+
+class RoleListView(generics.ListCreateAPIView):
+    """
+    List all roles or create a new role (admin only).
+    """
+    permission_classes = [IsAuthenticated, IsAdministrator]
+    queryset = Role.objects.all().select_related('department').order_by('level', 'name')
+    serializer_class = RoleSerializer
+
+
+class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update, or delete a role (admin only).
+    """
+    permission_classes = [IsAuthenticated, IsAdministrator]
+    queryset = Role.objects.all().select_related('department')
+    serializer_class = RoleSerializer
+    lookup_field = 'pk'
+
+    def perform_destroy(self, instance):
+        """Prevent deletion if role has users or is a system role."""
+        if instance.is_system_role:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                f"Cannot delete system role '{instance.name}'."
+            )
+        if instance.users.exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                f"Cannot delete role '{instance.name}' because it has {instance.users.count()} users assigned."
+            )
+        instance.delete()

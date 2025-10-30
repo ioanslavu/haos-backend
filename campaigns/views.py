@@ -21,7 +21,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [IsAuthenticated, CampaignPermission]
     filterset_class = CampaignFilter
-    search_fields = ['campaign_name', 'notes', 'client__display_name', 'artist__display_name', 'brand__display_name']
+    search_fields = ['campaign_name', 'notes', 'client__display_name', 'artist__display_name', 'brand__display_name', 'song__title']
     ordering_fields = ['created_at', 'updated_at', 'campaign_name', 'value', 'status', 'confirmed_at']
     ordering = ['-created_at']
 
@@ -41,6 +41,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             'client',
             'artist',
             'brand',
+            'song',
             'created_by'
         )
 
@@ -144,7 +145,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         for brand in brands:
             brand_campaigns = Campaign.objects.filter(brand=brand).select_related(
-            'client', 'artist', 'brand', 'created_by'
+            'client', 'artist', 'brand', 'song', 'created_by'
         )
 
             brand_stats = {
@@ -212,7 +213,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             )
 
         brand_campaigns = Campaign.objects.filter(brand=brand).select_related(
-            'client', 'artist', 'brand', 'created_by'
+            'client', 'artist', 'brand', 'song', 'created_by'
         )
 
         analytics = {
@@ -284,7 +285,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         for artist in artists:
             artist_campaigns = Campaign.objects.filter(artist=artist).select_related(
-                'client', 'artist', 'brand', 'created_by'
+                'client', 'artist', 'brand', 'song', 'created_by'
             )
 
             artist_stats = {
@@ -370,7 +371,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             )
 
         artist_campaigns = Campaign.objects.filter(artist=artist).select_related(
-            'client', 'artist', 'brand', 'created_by'
+            'client', 'artist', 'brand', 'song', 'created_by'
         )
 
         analytics = {
@@ -460,7 +461,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
         for client in clients:
             client_campaigns = Campaign.objects.filter(client=client).select_related(
-                'client', 'artist', 'brand', 'created_by'
+                'client', 'artist', 'brand', 'song', 'created_by'
             )
 
             client_stats = {
@@ -546,7 +547,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             )
 
         client_campaigns = Campaign.objects.filter(client=client).select_related(
-            'client', 'artist', 'brand', 'created_by'
+            'client', 'artist', 'brand', 'song', 'created_by'
         )
 
         analytics = {

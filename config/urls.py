@@ -51,6 +51,14 @@ urlpatterns = [
     path('api/v1/department-requests/<int:request_id>/', api_views.DepartmentRequestDetailView.as_view(), name='department_request_detail'),
     path('api/v1/department-requests/pending/count/', api_views.PendingRequestsCountView.as_view(), name='pending_requests_count'),
 
+    # Department Management API (admin only)
+    path('api/v1/departments/', api_views.DepartmentListView.as_view(), name='department_list'),
+    path('api/v1/departments/<int:pk>/', api_views.DepartmentDetailView.as_view(), name='department_detail'),
+
+    # Role Management API (admin only)
+    path('api/v1/roles/management/', api_views.RoleListView.as_view(), name='role_management_list'),
+    path('api/v1/roles/management/<int:pk>/', api_views.RoleDetailView.as_view(), name='role_management_detail'),
+
     # Roles API (fixed roles mapped from UserProfile)
     path('api/v1/roles/', api_roles.RolesListView.as_view(), name='roles_list'),
     path('api/v1/roles/<int:role_id>/', api_roles.RoleDetailView.as_view(), name='role_detail'),
@@ -65,6 +73,7 @@ urlpatterns = [
     path('api/v1/impersonate/start/', views_impersonate.StartImpersonationView.as_view(), name='impersonate_start'),
     path('api/v1/impersonate/stop/', views_impersonate.StopImpersonationView.as_view(), name='impersonate_stop'),
     path('api/v1/impersonate/status/', views_impersonate.ImpersonationStatusView.as_view(), name='impersonate_status'),
+    path('api/v1/impersonate/test-users/', views_impersonate.TestUsersListView.as_view(), name='impersonate_test_users'),
 
     # Contracts API
     path('api/v1/', include('contracts.urls')),
@@ -77,6 +86,12 @@ urlpatterns = [
 
     # Campaigns API
     path('api/v1/', include('campaigns.urls')),
+
+    # CRM Extensions API (Tasks, Activities, Metrics)
+    path('api/v1/crm/', include('crm_extensions.urls')),
+
+    # Notifications API
+    path('api/v1/', include('notifications.urls')),
 ]
 
 # Serve media files in development

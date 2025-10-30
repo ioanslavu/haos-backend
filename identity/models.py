@@ -78,6 +78,14 @@ class Entity(models.Model):
         help_text="Gender (for Physical Persons)"
     )
 
+    # Profile photo
+    profile_photo = models.ImageField(
+        upload_to='entity_photos/',
+        blank=True,
+        null=True,
+        help_text="Profile photo for the entity"
+    )
+
     # Banking information
     iban = models.CharField(
         max_length=34,  # Max IBAN length
@@ -483,6 +491,12 @@ class EntityRole(models.Model):
     primary_role = models.BooleanField(
         default=False,
         help_text="Is this the primary role for this entity?"
+    )
+
+    is_internal = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Is this a signed artist/internal role or external contractor?"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -8,8 +8,24 @@ from .models import (
 User = get_user_model()
 
 
+class NullableDateField(serializers.DateField):
+    """
+    Custom DateField that converts empty strings to None.
+    This handles frontend forms that send '' instead of null for optional date fields.
+    """
+    def to_internal_value(self, value):
+        # Convert empty string to None
+        if value == '' or value is None:
+            return None
+        return super().to_internal_value(value)
+
+
 class IdentifierSerializer(serializers.ModelSerializer):
     """Serializer for Identifier model."""
+
+    # Override date fields to handle empty strings
+    issued_date = NullableDateField(required=False, allow_null=True)
+    expiry_date = NullableDateField(required=False, allow_null=True)
 
     class Meta:
         model = Identifier
@@ -27,7 +43,7 @@ class EntityRoleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EntityRole
-        fields = ['id', 'role', 'role_display', 'primary_role', 'created_at']
+        fields = ['id', 'role', 'role_display', 'primary_role', 'is_internal', 'created_at']
         read_only_fields = ['created_at']
 
 
@@ -165,12 +181,13 @@ class EntityListSerializer(serializers.ModelSerializer):
 
     roles = serializers.SerializerMethodField()
     kind_display = serializers.CharField(source='get_kind_display', read_only=True)
+    profile_photo = serializers.ImageField(read_only=True)
 
     class Meta:
         model = Entity
         fields = [
             'id', 'kind', 'kind_display', 'display_name', 'first_name', 'last_name',
-            'stage_name', 'nationality', 'gender', 'email', 'phone', 'roles', 'created_at'
+            'stage_name', 'nationality', 'gender', 'email', 'phone', 'profile_photo', 'roles', 'created_at'
         ]
         read_only_fields = ['created_at']
 
@@ -195,12 +212,13 @@ class EntityDetailSerializer(serializers.ModelSerializer):
     created_by = serializers.StringRelatedField(read_only=True)
     has_sensitive_data = serializers.SerializerMethodField()
     placeholders = serializers.SerializerMethodField()
+    profile_photo = serializers.ImageField(read_only=True)
 
     class Meta:
         model = Entity
         fields = [
             'id', 'kind', 'kind_display', 'display_name', 'first_name', 'last_name',
-            'stage_name', 'nationality', 'gender', 'email', 'phone',
+            'stage_name', 'nationality', 'gender', 'email', 'phone', 'profile_photo',
             'iban', 'bank_name', 'bank_branch',
             'address', 'city', 'state', 'zip_code', 'country',
             'company_registration_number', 'vat_number',
@@ -220,13 +238,42 @@ class EntityDetailSerializer(serializers.ModelSerializer):
         return obj.get_placeholders()
 
 
+class RoleDataField(serializers.ListField):
+    """
+    Custom field that accepts roles in two formats:
+    1. Simple list: ["artist", "producer"]
+    2. Detailed list: [{"role": "artist", "is_internal": true}, ...]
+    """
+    def to_internal_value(self, data):
+        if not data:
+            return []
+
+        result = []
+        for item in data:
+            if isinstance(item, str):
+                # Simple format: just role name
+                result.append({'role': item, 'is_internal': False})
+            elif isinstance(item, dict):
+                # Detailed format: validate required fields
+                if 'role' not in item:
+                    raise serializers.ValidationError("Each role object must have a 'role' field")
+                result.append({
+                    'role': item['role'],
+                    'is_internal': item.get('is_internal', False)
+                })
+            else:
+                raise serializers.ValidationError("Each role must be a string or an object")
+
+        return result
+
+
 class EntityCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating Entity."""
 
-    roles = serializers.ListField(
-        child=serializers.ChoiceField(choices=EntityRole.ROLE_CHOICES),
+    roles = RoleDataField(
         write_only=True,
-        required=False
+        required=False,
+        help_text="List of roles (strings) or detailed role objects with is_internal flag"
     )
     primary_role = serializers.ChoiceField(
         choices=EntityRole.ROLE_CHOICES,
@@ -283,19 +330,19 @@ class EntityCreateUpdateSerializer(serializers.ModelSerializer):
         allow_blank=True,
         help_text="Issuing authority"
     )
-    id_issued_date = serializers.DateField(
+    id_issued_date = NullableDateField(
         write_only=True,
         required=False,
         allow_null=True,
         help_text="Date of issuance"
     )
-    id_expiry_date = serializers.DateField(
+    id_expiry_date = NullableDateField(
         write_only=True,
         required=False,
         allow_null=True,
         help_text="Expiry date"
     )
-    date_of_birth = serializers.DateField(
+    date_of_birth = NullableDateField(
         write_only=True,
         required=False,
         allow_null=True,
@@ -312,7 +359,7 @@ class EntityCreateUpdateSerializer(serializers.ModelSerializer):
         model = Entity
         fields = [
             'id', 'kind', 'display_name', 'first_name', 'last_name', 'stage_name',
-            'nationality', 'gender', 'email', 'phone',
+            'nationality', 'gender', 'email', 'phone', 'profile_photo',
             'iban', 'bank_name', 'bank_branch',
             'address', 'city', 'state', 'zip_code', 'country',
             'company_registration_number', 'vat_number',
@@ -392,11 +439,12 @@ class EntityCreateUpdateSerializer(serializers.ModelSerializer):
             sensitive_identity.save()
 
         # Create entity roles
-        for role in roles_data:
+        for role_data in roles_data:
             EntityRole.objects.create(
                 entity=entity,
-                role=role,
-                primary_role=(role == primary_role)
+                role=role_data['role'],
+                primary_role=(role_data['role'] == primary_role),
+                is_internal=role_data.get('is_internal', False)
             )
 
         return entity
@@ -481,11 +529,12 @@ class EntityCreateUpdateSerializer(serializers.ModelSerializer):
         if roles_data is not None:
             # Clear existing roles and recreate
             instance.entity_roles.all().delete()
-            for role in roles_data:
+            for role_data in roles_data:
                 EntityRole.objects.create(
                     entity=instance,
-                    role=role,
-                    primary_role=(role == primary_role)
+                    role=role_data['role'],
+                    primary_role=(role_data['role'] == primary_role),
+                    is_internal=role_data.get('is_internal', False)
                 )
 
         return instance

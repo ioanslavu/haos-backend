@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 User = get_user_model()
@@ -10,11 +10,6 @@ class Campaign(models.Model):
     """
     Campaign model for tracking brand deals with clients and artists.
     """
-
-    DEPARTMENT_CHOICES = [
-        ('digital', 'Digital'),
-        ('sales', 'Sales'),
-    ]
 
     STATUS_CHOICES = [
         ('lead', 'Lead'),
@@ -30,21 +25,32 @@ class Campaign(models.Model):
         'identity.Entity',
         on_delete=models.PROTECT,
         related_name='campaigns_as_client',
-        help_text="Client entity (must have 'client' role)"
+        help_text="Client entity (can be any business role entity)"
     )
 
     artist = models.ForeignKey(
         'identity.Entity',
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='campaigns_as_artist',
-        help_text="Artist entity (must have 'artist' role)"
+        help_text="Artist entity (optional - use artist or song)"
     )
 
     brand = models.ForeignKey(
         'identity.Entity',
         on_delete=models.PROTECT,
         related_name='campaigns_as_brand',
-        help_text="Brand entity (must have 'brand' role)"
+        help_text="Brand entity (can be any business role entity)"
+    )
+
+    song = models.ForeignKey(
+        'catalog.Recording',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='campaigns',
+        help_text="Song/recording for this campaign (optional - use artist or song)"
     )
 
     contact_person = models.ForeignKey(
@@ -57,12 +63,14 @@ class Campaign(models.Model):
     )
 
     # Department for RBAC
-    department = models.CharField(
-        max_length=50,
-        choices=DEPARTMENT_CHOICES,
-        default='digital',  # Temporary default for migration
-        db_index=True,
-        help_text="Department this campaign belongs to (auto-set from creator)"
+    # Null = admin-only campaign (visible only to admins)
+    department = models.ForeignKey(
+        'api.Department',
+        on_delete=models.PROTECT,
+        related_name='campaigns',
+        null=True,
+        blank=True,
+        help_text="Department this campaign belongs to. If null, only admins can see it."
     )
 
     # Campaign details
@@ -94,6 +102,120 @@ class Campaign(models.Model):
         help_text="When the campaign was confirmed"
     )
 
+    # Department-specific fields for Digital campaigns
+    SERVICE_TYPE_CHOICES = [
+        ('ppc', 'PPC Campaign'),
+        ('tiktok_ugc', 'TikTok UGC'),
+        ('dsp_distribution', 'DSP Distribution'),
+        ('radio_plugging', 'Radio Plugging'),
+        ('playlist_pitching', 'Playlist Pitching'),
+        ('youtube_cms', 'YouTube CMS'),
+        ('social_media_mgmt', 'Social Media Management'),
+        ('content_creation', 'Content Creation'),
+        ('influencer_marketing', 'Influencer Marketing'),
+        ('seo', 'SEO Optimization'),
+        ('email_marketing', 'Email Marketing'),
+    ]
+
+    service_type = models.CharField(
+        max_length=50,
+        choices=SERVICE_TYPE_CHOICES,
+        blank=True,
+        db_index=True,
+        help_text="Type of service for digital campaigns"
+    )
+
+    PLATFORM_CHOICES = [
+        ('meta', 'Meta (Facebook/Instagram)'),
+        ('google', 'Google Ads'),
+        ('tiktok', 'TikTok'),
+        ('spotify', 'Spotify'),
+        ('youtube', 'YouTube'),
+        ('apple_music', 'Apple Music'),
+        ('deezer', 'Deezer'),
+        ('amazon_music', 'Amazon Music'),
+        ('soundcloud', 'SoundCloud'),
+        ('twitter', 'Twitter/X'),
+        ('linkedin', 'LinkedIn'),
+        ('snapchat', 'Snapchat'),
+        ('pinterest', 'Pinterest'),
+        ('multi', 'Multi-Platform'),
+    ]
+
+    platform = models.CharField(
+        max_length=50,
+        choices=PLATFORM_CHOICES,
+        blank=True,
+        db_index=True,
+        help_text="Primary platform for digital campaigns"
+    )
+
+    # Campaign timeline
+    start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Campaign start date"
+    )
+
+    end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Campaign end date"
+    )
+
+    # Budget tracking
+    budget_allocated = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text="Budget allocated for this campaign"
+    )
+
+    budget_spent = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text="Budget spent so far"
+    )
+
+    currency = models.CharField(
+        max_length=3,
+        default='EUR',
+        help_text="Currency for all monetary values"
+    )
+
+    # KPI tracking
+    kpi_targets = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Target KPIs for the campaign. Format: {'kpi_name': {'target': value, 'unit': 'unit'}}"
+    )
+
+    kpi_actuals = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Current/actual KPIs. Format: {'kpi_name': {'actual': value, 'unit': 'unit', 'last_updated': 'ISO datetime'}}"
+    )
+
+    # Department-specific metadata (flexible JSON storage)
+    department_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Department-specific data and metadata"
+    )
+
+    # Client health/relationship score
+    client_health_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Client relationship health score (1-10)"
+    )
+
     # Metadata
     notes = models.TextField(
         blank=True,
@@ -118,6 +240,7 @@ class Campaign(models.Model):
             models.Index(fields=['brand', 'status']),
             models.Index(fields=['client', 'status']),
             models.Index(fields=['artist', 'status']),
+            models.Index(fields=['song', 'status']),
             models.Index(fields=['department', 'status']),  # For RBAC filtering
             models.Index(fields=['department', 'created_at']),  # For department-based queries
         ]
