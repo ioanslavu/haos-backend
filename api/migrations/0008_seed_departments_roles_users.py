@@ -4,9 +4,11 @@ from django.db import migrations
 from django.contrib.auth.hashers import make_password
 
 
-def seed_departments_and_roles(apps, schema_editor):
+def seed_departments_roles_and_migrate_data(apps, schema_editor):
     """
-    Seed initial departments, roles, and test users for the system.
+    1. Seed initial departments and roles
+    2. Migrate existing user data from old string fields to new FK fields
+    3. Create test users
     """
     Department = apps.get_model('api', 'Department')
     Role = apps.get_model('api', 'Role')
@@ -159,13 +161,74 @@ def seed_departments_and_roles(apps, schema_editor):
 
     print("Created roles: guest, digital_employee, digital_manager, sales_employee, sales_manager, publishing_employee, publishing_manager, administrator")
 
+    # ===== MIGRATE EXISTING USER DATA =====
+    print("\nMigrating existing user data from old string fields to new FK fields...")
+
+    # Map old string values to new Role objects
+    role_mapping = {
+        'guest': guest,
+        'administrator': administrator,
+        'digital_employee': digital_employee,
+        'digital_manager': digital_manager,
+        'sales_employee': sales_employee,
+        'sales_manager': sales_manager,
+        'publishing_employee': publishing_employee,
+        'publishing_manager': publishing_manager,
+    }
+
+    # Map old department strings to new Department objects
+    department_mapping = {
+        'digital': digital,
+        'sales': sales,
+        'legal': legal,
+        'publishing': publishing,
+    }
+
+    # Migrate all existing UserProfiles
+    profiles_updated = 0
+    for profile in UserProfile.objects.all():
+        updated = False
+
+        # Migrate role from old string field
+        if hasattr(profile, 'role_old') and profile.role_old:
+            old_role_str = profile.role_old
+            if old_role_str in role_mapping:
+                profile.role = role_mapping[old_role_str]
+                updated = True
+                print(f"  Migrated user {profile.user.email}: role '{old_role_str}' -> {profile.role.name}")
+            else:
+                # Default to guest if unknown role
+                profile.role = guest
+                updated = True
+                print(f"  WARNING: Unknown role '{old_role_str}' for {profile.user.email}, defaulting to guest")
+        elif not profile.role:
+            # No old role data, default to guest
+            profile.role = guest
+            updated = True
+            print(f"  Set default guest role for {profile.user.email}")
+
+        # Migrate department from old string field
+        if hasattr(profile, 'department_old') and profile.department_old:
+            old_dept_str = profile.department_old
+            if old_dept_str in department_mapping:
+                profile.department = department_mapping[old_dept_str]
+                updated = True
+                print(f"  Migrated user {profile.user.email}: department '{old_dept_str}' -> {profile.department.name}")
+            else:
+                print(f"  WARNING: Unknown department '{old_dept_str}' for {profile.user.email}, leaving as None")
+
+        if updated:
+            profile.save()
+            profiles_updated += 1
+
+    print(f"\nMigrated {profiles_updated} existing user profiles")
+
     # ===== CREATE TEST USERS FOR IMPERSONATION =====
-    print("Creating test users for impersonation...")
+    print("\nCreating test users for impersonation...")
     print("NOTE: These users are for the 'Test as Roles' impersonation feature in the UI.")
     print("      They allow testing role/department permissions without separate accounts.")
 
     # Define test users data
-    # NOTE: No test admin user - admins cannot be impersonated for security
     test_users = [
         {
             'email': 'test.guest@hahahaproduction.com',
@@ -254,7 +317,7 @@ def seed_departments_and_roles(apps, schema_editor):
             defaults={'role': role, 'department': dept, 'setup_completed': True}
         )
 
-    print("\n=== SEED DATA MIGRATION COMPLETED ===")
+    print("\n=== SEED AND MIGRATION COMPLETED ===")
     print("Test users created with following credentials (password: test123 for all):")
     print("  test.digital.manager@hahahaproduction.com (Digital Manager)")
     print("  test.digital.employee@hahahaproduction.com (Digital Employee)")
@@ -277,14 +340,13 @@ def reverse_seed(apps, schema_editor):
 
     # Delete test users
     test_emails = [
-        'guest@hahahaproduction.com',
-        'admin@hahahaproduction.com',
-        'digital.manager@hahahaproduction.com',
-        'digital.employee@hahahaproduction.com',
-        'sales.manager@hahahaproduction.com',
-        'sales.employee@hahahaproduction.com',
-        'publishing.manager@hahahaproduction.com',
-        'publishing.employee@hahahaproduction.com',
+        'test.guest@hahahaproduction.com',
+        'test.digital.manager@hahahaproduction.com',
+        'test.digital.employee@hahahaproduction.com',
+        'test.sales.manager@hahahaproduction.com',
+        'test.sales.employee@hahahaproduction.com',
+        'test.publishing.manager@hahahaproduction.com',
+        'test.publishing.employee@hahahaproduction.com',
     ]
     User.objects.filter(email__in=test_emails).delete()
 
@@ -300,5 +362,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(seed_departments_and_roles, reverse_seed),
+        migrations.RunPython(seed_departments_roles_and_migrate_data, reverse_seed),
     ]

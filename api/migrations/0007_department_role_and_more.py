@@ -11,6 +11,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Step 1: Create new Department and Role models
         migrations.CreateModel(
             name='Department',
             fields=[
@@ -47,29 +48,46 @@ class Migration(migrations.Migration):
                 'ordering': ['level', 'code'],
             },
         ),
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_role_id_4a16d0_idx',
-            old_name='api_userpro_role_9579a2_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_departm_438aff_idx',
-            old_name='api_userpro_departm_4dcd85_idx',
-        ),
-        migrations.AlterField(
-            model_name='userprofile',
-            name='department',
-            field=models.ForeignKey(blank=True, help_text="User's department (employees/managers require department)", null=True, on_delete=django.db.models.deletion.PROTECT, related_name='users', to='api.department'),
-        ),
+        # Step 2: Add FK relationship to Role model (this is safe because Role is new)
         migrations.AddField(
             model_name='role',
             name='department',
             field=models.ForeignKey(blank=True, help_text='If set, this role can only be assigned to users in this specific department', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='roles', to='api.department'),
         ),
-        migrations.AlterField(
+        # Step 3: Rename old CharField fields to preserve data
+        migrations.RenameField(
+            model_name='userprofile',
+            old_name='department',
+            new_name='department_old',
+        ),
+        migrations.RenameField(
+            model_name='userprofile',
+            old_name='role',
+            new_name='role_old',
+        ),
+        # Step 4: Add NEW nullable ForeignKey fields
+        migrations.AddField(
+            model_name='userprofile',
+            name='department',
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                help_text="User's department (employees/managers require department)",
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name='users',
+                to='api.department'
+            ),
+        ),
+        migrations.AddField(
             model_name='userprofile',
             name='role',
-            field=models.ForeignKey(help_text="User's role in the system", on_delete=django.db.models.deletion.PROTECT, related_name='users', to='api.role'),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                help_text="User's role in the system",
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name='users',
+                to='api.role'
+            ),
         ),
     ]
