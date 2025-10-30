@@ -82,6 +82,40 @@ class RestrictedDomainAdapter(DefaultSocialAccountAdapter):
 
         logger.info(f"Domain check passed for: {email}")
 
+    def save_user(self, request, sociallogin, form=None):
+        """
+        Ensure a unique username is set for the Django User when signing up
+        through social login. We derive it from the email local part and
+        guarantee uniqueness; if email is missing, fall back to a UUID.
+
+        This avoids IntegrityError on the unique username constraint of the
+        default Django User model.
+        """
+        user = sociallogin.user
+
+        # If the project uses the stock User with a unique username, make sure it's set
+        if hasattr(user, 'username') and not getattr(user, 'username', None):
+            from django.contrib.auth import get_user_model
+            from uuid import uuid4
+
+            # Prefer email from user or provider payload
+            email = getattr(user, 'email', '') or sociallogin.account.extra_data.get('email', '')
+            base = ''
+            if email and '@' in email:
+                base = email.split('@')[0]
+
+            candidate = base or uuid4().hex[:16]
+            User = get_user_model()
+            orig = candidate
+            i = 0
+            # Ensure uniqueness across existing users
+            while User.objects.filter(username=candidate).exclude(id=getattr(user, 'id', None)).exists():
+                i += 1
+                candidate = f"{orig}-{i}"
+            user.username = candidate
+
+        return super().save_user(request, sociallogin, form=form)
+
     # SocialAccountAdapter doesn't control login redirect; AccountAdapter does.
     # Keep this class focused on domain checks and error redirects.
 
