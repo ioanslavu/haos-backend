@@ -3,6 +3,64 @@
 from django.db import migrations
 
 
+def rename_index_if_exists(apps, schema_editor, table_name, old_name, new_name):
+    """Rename an index only if it exists"""
+    with schema_editor.connection.cursor() as cursor:
+        # Check if the old index exists
+        cursor.execute("""
+            SELECT indexname
+            FROM pg_indexes
+            WHERE tablename = %s AND indexname = %s
+        """, [table_name, old_name])
+
+        if cursor.fetchone():
+            # Index exists, rename it
+            cursor.execute(f'ALTER INDEX "{old_name}" RENAME TO "{new_name}"')
+        else:
+            # Index doesn't exist, check if the new name already exists
+            cursor.execute("""
+                SELECT indexname
+                FROM pg_indexes
+                WHERE tablename = %s AND indexname = %s
+            """, [table_name, new_name])
+
+            if not cursor.fetchone():
+                # Neither old nor new index exists - this might indicate a problem
+                print(f"Warning: Neither '{old_name}' nor '{new_name}' index exists on {table_name}")
+
+
+def rename_userprofile_indexes(apps, schema_editor):
+    """Safely rename UserProfile indexes"""
+    rename_index_if_exists(
+        apps, schema_editor,
+        'api_userprofile',
+        'api_userpro_role_9579a2_idx',
+        'api_userpro_role_id_4a16d0_idx'
+    )
+    rename_index_if_exists(
+        apps, schema_editor,
+        'api_userprofile',
+        'api_userpro_departm_4dcd85_idx',
+        'api_userpro_departm_438aff_idx'
+    )
+
+
+def reverse_rename_userprofile_indexes(apps, schema_editor):
+    """Reverse the index renaming"""
+    rename_index_if_exists(
+        apps, schema_editor,
+        'api_userprofile',
+        'api_userpro_role_id_4a16d0_idx',
+        'api_userpro_role_9579a2_idx'
+    )
+    rename_index_if_exists(
+        apps, schema_editor,
+        'api_userprofile',
+        'api_userpro_departm_438aff_idx',
+        'api_userpro_departm_4dcd85_idx'
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,14 +68,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_role_id_4a16d0_idx',
-            old_name='api_userpro_role_9579a2_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_departm_438aff_idx',
-            old_name='api_userpro_departm_4dcd85_idx',
+        migrations.RunPython(
+            rename_userprofile_indexes,
+            reverse_rename_userprofile_indexes
         ),
     ]
