@@ -65,6 +65,12 @@ class CampaignFilter(django_filters.FilterSet):
         help_text="Search by campaign name, notes, or entity names"
     )
 
+    # Service type filter (for digital campaigns)
+    service_type = django_filters.CharFilter(
+        method='filter_service_type',
+        help_text="Filter by service type"
+    )
+
     class Meta:
         model = Campaign
         fields = [
@@ -76,6 +82,7 @@ class CampaignFilter(django_filters.FilterSet):
             'created_before',
             'confirmed_after',
             'confirmed_before',
+            'service_type',
         ]
 
     def filter_search(self, queryset, name, value):
@@ -90,3 +97,11 @@ class CampaignFilter(django_filters.FilterSet):
             models.Q(artist__display_name__icontains=value) |
             models.Q(brand__display_name__icontains=value)
         )
+
+    def filter_service_type(self, queryset, name, value):
+        """Filter campaigns by service type (ArrayField contains lookup)"""
+        if not value:
+            return queryset
+
+        # Use contains lookup for ArrayField
+        return queryset.filter(service_types__contains=[value])

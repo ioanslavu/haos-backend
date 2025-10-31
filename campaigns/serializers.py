@@ -31,9 +31,12 @@ class CampaignListSerializer(serializers.ModelSerializer):
     contact_person = ContactPersonSerializer(read_only=True)
     created_by_name = serializers.SerializerMethodField()
     department_display = serializers.SerializerMethodField()
-    service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
-    platform_display = serializers.CharField(source='get_platform_display', read_only=True)
+    service_types_display = serializers.SerializerMethodField()
+    platforms_display = serializers.SerializerMethodField()
     kpi_completion = serializers.SerializerMethodField()
+    partner_payout = serializers.SerializerMethodField()
+    our_revenue = serializers.SerializerMethodField()
+    calculated_profit = serializers.SerializerMethodField()
 
     class Meta:
         model = Campaign
@@ -49,11 +52,18 @@ class CampaignListSerializer(serializers.ModelSerializer):
             'department_display',
             'value',
             'currency',
+            'pricing_model',
+            'revenue_generated',
+            'partner_share_percentage',
+            'partner_payout',
+            'our_revenue',
+            'calculated_profit',
             'status',
-            'service_type',
-            'service_type_display',
-            'platform',
-            'platform_display',
+            'invoice_status',
+            'service_types',
+            'service_types_display',
+            'platforms',
+            'platforms_display',
             'start_date',
             'end_date',
             'budget_allocated',
@@ -73,6 +83,20 @@ class CampaignListSerializer(serializers.ModelSerializer):
         if obj.department:
             return obj.department.name
         return "Admin Only"
+
+    def get_service_types_display(self, obj):
+        """Return list of service type display names"""
+        if not obj.service_types:
+            return []
+        service_type_dict = dict(Campaign.SERVICE_TYPE_CHOICES)
+        return [service_type_dict.get(st, st) for st in obj.service_types]
+
+    def get_platforms_display(self, obj):
+        """Return list of platform display names"""
+        if not obj.platforms:
+            return []
+        platform_dict = dict(Campaign.PLATFORM_CHOICES)
+        return [platform_dict.get(p, p) for p in obj.platforms]
 
     def get_kpi_completion(self, obj):
         """Calculate KPI completion percentage"""
@@ -95,6 +119,21 @@ class CampaignListSerializer(serializers.ModelSerializer):
 
         return round((completed_count / total_count) * 100, 1)
 
+    def get_partner_payout(self, obj):
+        """Get calculated partner payout"""
+        payout = obj.partner_payout
+        return str(payout) if payout is not None else None
+
+    def get_our_revenue(self, obj):
+        """Get calculated our revenue share"""
+        revenue = obj.our_revenue
+        return str(revenue) if revenue is not None else None
+
+    def get_calculated_profit(self, obj):
+        """Get calculated profit based on pricing model"""
+        profit = obj.calculated_profit
+        return str(profit) if profit is not None else None
+
 
 class CampaignDetailSerializer(serializers.ModelSerializer):
     """Full serializer for campaign details"""
@@ -106,8 +145,11 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
     handlers = CampaignHandlerSerializer(many=True, read_only=True)
     created_by_name = serializers.SerializerMethodField()
     department_display = serializers.SerializerMethodField()
-    service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
-    platform_display = serializers.CharField(source='get_platform_display', read_only=True)
+    service_types_display = serializers.SerializerMethodField()
+    platforms_display = serializers.SerializerMethodField()
+    partner_payout = serializers.SerializerMethodField()
+    our_revenue = serializers.SerializerMethodField()
+    calculated_profit = serializers.SerializerMethodField()
     tasks_count = serializers.IntegerField(source='tasks.count', read_only=True)
     activities_count = serializers.IntegerField(source='activities.count', read_only=True)
 
@@ -125,11 +167,18 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
             'department_display',
             'value',
             'currency',
+            'pricing_model',
+            'revenue_generated',
+            'partner_share_percentage',
+            'partner_payout',
+            'our_revenue',
+            'calculated_profit',
             'status',
-            'service_type',
-            'service_type_display',
-            'platform',
-            'platform_display',
+            'invoice_status',
+            'service_types',
+            'service_types_display',
+            'platforms',
+            'platforms_display',
             'start_date',
             'end_date',
             'budget_allocated',
@@ -158,6 +207,35 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
             return obj.department.name
         return "Admin Only"
 
+    def get_service_types_display(self, obj):
+        """Return list of service type display names"""
+        if not obj.service_types:
+            return []
+        service_type_dict = dict(Campaign.SERVICE_TYPE_CHOICES)
+        return [service_type_dict.get(st, st) for st in obj.service_types]
+
+    def get_platforms_display(self, obj):
+        """Return list of platform display names"""
+        if not obj.platforms:
+            return []
+        platform_dict = dict(Campaign.PLATFORM_CHOICES)
+        return [platform_dict.get(p, p) for p in obj.platforms]
+
+    def get_partner_payout(self, obj):
+        """Get calculated partner payout"""
+        payout = obj.partner_payout
+        return str(payout) if payout is not None else None
+
+    def get_our_revenue(self, obj):
+        """Get calculated our revenue share"""
+        revenue = obj.our_revenue
+        return str(revenue) if revenue is not None else None
+
+    def get_calculated_profit(self, obj):
+        """Get calculated profit based on pricing model"""
+        profit = obj.calculated_profit
+        return str(profit) if profit is not None else None
+
 
 class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating campaigns"""
@@ -176,9 +254,13 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
             'department',  # Optional: Admins can specify or leave null (admin-only), auto-set for others
             'value',
             'currency',
+            'pricing_model',
+            'revenue_generated',
+            'partner_share_percentage',
             'status',
-            'service_type',
-            'platform',
+            'invoice_status',
+            'service_types',
+            'platforms',
             'start_date',
             'end_date',
             'budget_allocated',
@@ -193,14 +275,19 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
         extra_kwargs = {
             'department': {'required': False, 'allow_null': True},
-            'service_type': {'required': False, 'allow_blank': True},
-            'platform': {'required': False, 'allow_blank': True},
+            'service_types': {'required': False},
+            'platforms': {'required': False},
             'currency': {'required': False},
+            'value': {'required': False, 'allow_null': True},
+            'pricing_model': {'required': False},
+            'revenue_generated': {'required': False},
+            'partner_share_percentage': {'required': False},
+            'invoice_status': {'required': False},
         }
 
     def validate_value(self, value):
-        """Ensure value is positive"""
-        if value < 0:
+        """Ensure value is positive if provided"""
+        if value is not None and value < 0:
             raise serializers.ValidationError("Value must be positive")
         return value
 
@@ -208,6 +295,37 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
         """
         Cross-field validation
         """
+        # Pricing model validation
+        pricing_model = data.get('pricing_model', self.instance.pricing_model if self.instance else 'service_fee')
+
+        # For service_fee model
+        if pricing_model == 'service_fee':
+            # Value should be provided for service_fee campaigns
+            if not data.get('value') and not (self.instance and self.instance.value):
+                raise serializers.ValidationError({
+                    'value': 'Value is required for service_fee pricing model'
+                })
+            # Revenue share fields should not be used
+            if data.get('revenue_generated') or data.get('partner_share_percentage'):
+                raise serializers.ValidationError({
+                    'pricing_model': 'revenue_generated and partner_share_percentage should only be used with revenue_share pricing model'
+                })
+
+        # For revenue_share model
+        elif pricing_model == 'revenue_share':
+            # Partner share percentage is required
+            if data.get('partner_share_percentage') is None and not (self.instance and self.instance.partner_share_percentage is not None):
+                raise serializers.ValidationError({
+                    'partner_share_percentage': 'Partner share percentage is required for revenue_share pricing model'
+                })
+            # Validate percentage range
+            if data.get('partner_share_percentage') is not None:
+                percentage = data['partner_share_percentage']
+                if percentage < 0 or percentage > 100:
+                    raise serializers.ValidationError({
+                        'partner_share_percentage': 'Partner share percentage must be between 0 and 100'
+                    })
+
         # If status is confirmed or later, confirmed_at should be set
         status = data.get('status')
         confirmed_at = data.get('confirmed_at')

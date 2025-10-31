@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
@@ -83,8 +84,10 @@ class Campaign(models.Model):
     value = models.DecimalField(
         max_digits=12,
         decimal_places=2,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(Decimal('0.00'))],
-        help_text="Campaign value in currency"
+        help_text="Campaign value in currency (optional, depends on pricing model)"
     )
 
     # Status tracking
@@ -117,12 +120,12 @@ class Campaign(models.Model):
         ('email_marketing', 'Email Marketing'),
     ]
 
-    service_type = models.CharField(
-        max_length=50,
-        choices=SERVICE_TYPE_CHOICES,
+    service_types = ArrayField(
+        models.CharField(max_length=50, choices=SERVICE_TYPE_CHOICES),
+        default=list,
         blank=True,
         db_index=True,
-        help_text="Type of service for digital campaigns"
+        help_text="Types of services for this campaign"
     )
 
     PLATFORM_CHOICES = [
@@ -142,12 +145,12 @@ class Campaign(models.Model):
         ('multi', 'Multi-Platform'),
     ]
 
-    platform = models.CharField(
-        max_length=50,
-        choices=PLATFORM_CHOICES,
+    platforms = ArrayField(
+        models.CharField(max_length=50, choices=PLATFORM_CHOICES),
+        default=list,
         blank=True,
         db_index=True,
-        help_text="Primary platform for digital campaigns"
+        help_text="Platforms for this campaign"
     )
 
     # Campaign timeline
@@ -206,7 +209,40 @@ class Campaign(models.Model):
         help_text="Estimated internal costs (labor, overhead, etc.)"
     )
 
+    PRICING_MODEL_CHOICES = [
+        ('service_fee', 'Service Fee'),
+        ('revenue_share', 'Revenue Share'),
+    ]
+
+    pricing_model = models.CharField(
+        max_length=20,
+        choices=PRICING_MODEL_CHOICES,
+        default='service_fee',
+        db_index=True,
+        help_text="Pricing model: service_fee (client pays us) or revenue_share (we generate revenue and share)"
+    )
+
+    # Revenue Share fields (only used when pricing_model='revenue_share')
+    revenue_generated = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text="Total revenue generated (for revenue_share model)"
+    )
+
+    partner_share_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        help_text="Percentage of revenue shared with partner (0.00-100.00, for revenue_share model)"
+    )
+
     INVOICE_STATUS_CHOICES = [
+        ('not_issued', 'Not Issued (Neemisă)'),
         ('issued', 'Issued (Emisă)'),
         ('collected', 'Collected (Încasată)'),
         ('delayed', 'Delayed (Întârziată)'),
@@ -215,8 +251,7 @@ class Campaign(models.Model):
     invoice_status = models.CharField(
         max_length=20,
         choices=INVOICE_STATUS_CHOICES,
-        null=True,
-        blank=True,
+        default='not_issued',
         db_index=True,
         help_text="Invoice status for this campaign"
     )
@@ -270,14 +305,45 @@ class Campaign(models.Model):
             models.Index(fields=['department', 'created_at']),  # For department-based queries
             # Financial query optimization indexes
             models.Index(fields=['start_date']),  # For date range filtering
-            models.Index(fields=['start_date', 'service_type']),  # For filtered financial queries
             models.Index(fields=['invoice_status', 'start_date']),  # For pending collections queries
+            models.Index(fields=['pricing_model', 'status']),  # For pricing model filtering
         ]
         verbose_name = 'Campaign'
         verbose_name_plural = 'Campaigns'
 
     def __str__(self):
         return f"{self.campaign_name} - {self.brand.display_name} ({self.get_status_display()})"
+
+    @property
+    def partner_payout(self):
+        """Calculate amount paid to partner (for revenue_share model)"""
+        if self.pricing_model == 'revenue_share' and self.revenue_generated and self.partner_share_percentage:
+            return (self.revenue_generated * self.partner_share_percentage) / Decimal('100.00')
+        return None
+
+    @property
+    def our_revenue(self):
+        """Calculate our share of revenue (for revenue_share model)"""
+        if self.pricing_model == 'revenue_share' and self.revenue_generated:
+            payout = self.partner_payout or Decimal('0.00')
+            return self.revenue_generated - payout
+        return None
+
+    @property
+    def calculated_profit(self):
+        """Calculate profit based on pricing model"""
+        if self.pricing_model == 'service_fee':
+            # Service fee model: profit = value - budget_spent
+            if self.value and self.budget_spent:
+                return self.value - self.budget_spent
+            return None
+        elif self.pricing_model == 'revenue_share':
+            # Revenue share model: profit = our_revenue - budget_allocated
+            our_rev = self.our_revenue
+            if our_rev and self.budget_allocated:
+                return our_rev - self.budget_allocated
+            return None
+        return None
 
     def save(self, *args, **kwargs):
         """Auto-set confirmed_at when status changes to confirmed"""

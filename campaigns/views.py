@@ -197,7 +197,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def brand_analytics_detail(self, request, brand_id=None):
         """
-        Get analytics for a specific brand
+        Get analytics for a specific brand with RBAC filtering
 
         URL: /api/v1/campaigns/brand_analytics/{brand_id}/
         Note: This is manually routed in urls.py
@@ -212,9 +212,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        brand_campaigns = Campaign.objects.filter(brand=brand).select_related(
-            'client', 'artist', 'brand', 'song', 'created_by'
-        )
+        # Use get_queryset() to respect RBAC filtering
+        base_queryset = self.get_queryset()
+        brand_campaigns = base_queryset.filter(brand=brand)
 
         analytics = {
             'brand_id': brand.id,
@@ -355,7 +355,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def artist_analytics_detail(self, request, artist_id=None):
         """
-        Get analytics for a specific artist
+        Get analytics for a specific artist with RBAC filtering
 
         URL: /api/v1/campaigns/artist_analytics/{artist_id}/
         Note: This is manually routed in urls.py
@@ -370,9 +370,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        artist_campaigns = Campaign.objects.filter(artist=artist).select_related(
-            'client', 'artist', 'brand', 'song', 'created_by'
-        )
+        # Use get_queryset() to respect RBAC filtering
+        base_queryset = self.get_queryset()
+        artist_campaigns = base_queryset.filter(artist=artist)
 
         analytics = {
             'artist_id': artist.id,
@@ -531,7 +531,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
     def client_analytics_detail(self, request, client_id=None):
         """
-        Get analytics for a specific client
+        Get analytics for a specific client with RBAC filtering
 
         URL: /api/v1/campaigns/client_analytics/{client_id}/
         Note: This is manually routed in urls.py
@@ -546,9 +546,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        client_campaigns = Campaign.objects.filter(client=client).select_related(
-            'client', 'artist', 'brand', 'song', 'created_by'
-        )
+        # Use get_queryset() to respect RBAC filtering
+        base_queryset = self.get_queryset()
+        client_campaigns = base_queryset.filter(client=client)
 
         analytics = {
             'client_id': client.id,

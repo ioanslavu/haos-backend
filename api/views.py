@@ -201,11 +201,41 @@ class CurrentUserProfileView(APIView):
 
 class UserListView(generics.ListAPIView):
     """
-    List all users (admin only) for user management page.
+    List users with flexible access rules:
+    - Admins: Can list all users (no filter required)
+    - Authenticated users: Can list users when filtering by department
     """
-    permission_classes = [IsAuthenticated, IsAdministrator]
-    queryset = User.objects.all().select_related('profile').order_by('-date_joined')
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        """
+        Filter users based on permissions and query parameters.
+        """
+        user = self.request.user
+        department = self.request.query_params.get('department', None)
+
+        # Base queryset
+        queryset = User.objects.filter(is_active=True).select_related('profile').order_by('first_name', 'last_name', 'email')
+
+        # Check if user has profile
+        if not hasattr(user, 'profile'):
+            return queryset.none()
+
+        profile = user.profile
+
+        # Admins can see all users, with or without filter
+        if profile.is_admin:
+            if department:
+                return queryset.filter(profile__department__code=department)
+            return queryset
+
+        # Non-admin users must provide a department filter
+        if not department:
+            return queryset.none()
+
+        # Filter by requested department
+        return queryset.filter(profile__department__code=department)
 
 
 class DepartmentUsersView(generics.ListAPIView):

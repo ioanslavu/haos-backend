@@ -164,22 +164,45 @@ class EntityViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """Get entity statistics."""
+        """
+        Get entity statistics respecting current filters.
+
+        Returns counts based on applied filters (role, kind, internal status, etc.)
+        so frontend stats match the filtered table results.
+        """
+        # Use filtered queryset to respect URL parameters
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Creative roles for the creative count
+        creative_roles = ['artist', 'producer', 'composer', 'lyricist', 'audio_editor']
+
+        total_count = queryset.count()
+        physical_count = queryset.filter(kind='PF').count()
+        legal_count = queryset.filter(kind='PJ').count()
+        creative_count = queryset.filter(entity_roles__role__in=creative_roles).distinct().count()
+
         stats = {
-            'total_entities': Entity.objects.count(),
-            'physical_persons': Entity.objects.filter(kind='PF').count(),
-            'legal_entities': Entity.objects.filter(kind='PJ').count(),
+            # New format (expected by frontend)
+            'total': total_count,
+            'physical': physical_count,
+            'legal': legal_count,
+            'creative': creative_count,
             'by_role': {},
-            'recent_entities': []
+            'recent_entities': [],
+            # Legacy fields for backward compatibility
+            'total_entities': total_count,
+            'physical_persons': physical_count,
+            'legal_entities': legal_count,
         }
 
-        # Count by role
+        # Count by role (respecting filters)
         for role_code, role_name in EntityRole.ROLE_CHOICES:
-            count = Entity.objects.filter(entity_roles__role=role_code).distinct().count()
-            stats['by_role'][role_name] = count
+            count = queryset.filter(entity_roles__role=role_code).distinct().count()
+            if count > 0:  # Only include roles with counts
+                stats['by_role'][role_name] = count
 
-        # Recent entities
-        recent = Entity.objects.order_by('-created_at')[:5]
+        # Recent entities (from filtered set)
+        recent = queryset.order_by('-created_at')[:5]
         stats['recent_entities'] = EntityListSerializer(recent, many=True).data
 
         return Response(stats)

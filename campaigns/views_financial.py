@@ -90,10 +90,10 @@ def apply_financial_filters(queryset, filters):
     if end_date:
         queryset = queryset.filter(start_date__lte=end_date)
 
-    # Service type filtering
+    # Service type filtering (now supports array field)
     service_type = filters.get('service_type')
     if service_type and service_type != 'all':
-        queryset = queryset.filter(service_type=service_type)
+        queryset = queryset.filter(service_types__contains=[service_type])
 
     # Campaign status filtering
     campaign_status = filters.get('status')
@@ -197,7 +197,7 @@ def revenue_by_month(request):
     try:
         # Get filtered campaigns
         queryset = Campaign.objects.filter(
-            department__name='Digital'
+            department__name='Digital Department'
         ).select_related('client', 'brand')
 
         queryset = apply_financial_filters(queryset, request.query_params)
@@ -266,35 +266,42 @@ def revenue_by_service(request):
     try:
         # Get filtered campaigns
         queryset = Campaign.objects.filter(
-            department__name='Digital'
+            department__name='Digital Department'
         ).select_related('client', 'brand')
 
         queryset = apply_financial_filters(queryset, request.query_params)
 
-        # Group by service type
+        # Group by service type (campaigns can have multiple service types)
         service_data = {}
 
         for campaign in queryset:
-            service = campaign.service_type or 'unknown'
+            # Get all service types for this campaign
+            services = campaign.service_types if campaign.service_types else ['unknown']
 
-            if service not in service_data:
-                # Get display name from choices
-                service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
-                    service,
-                    service.replace('_', ' ').title()
-                )
-
-                service_data[service] = {
-                    'service': service,
-                    'service_display': service_display,
-                    'revenue': Decimal('0.00'),
-                    'campaign_count': 0
-                }
-
-            # Convert and accumulate
+            # Convert revenue once per campaign
             value_eur = convert_to_eur(campaign.value, campaign.currency) or Decimal('0.00')
-            service_data[service]['revenue'] += value_eur
-            service_data[service]['campaign_count'] += 1
+
+            # Distribute to each service type (split revenue if multiple services)
+            revenue_per_service = value_eur / len(services) if services else value_eur
+
+            for service in services:
+                if service not in service_data:
+                    # Get display name from choices
+                    service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
+                        service,
+                        service.replace('_', ' ').title()
+                    )
+
+                    service_data[service] = {
+                        'service': service,
+                        'service_display': service_display,
+                        'revenue': Decimal('0.00'),
+                        'campaign_count': 0
+                    }
+
+                # Accumulate (revenue is split among service types)
+                service_data[service]['revenue'] += revenue_per_service
+                service_data[service]['campaign_count'] += 1
 
         # Convert to list and sort by revenue (descending)
         results = sorted(
@@ -334,7 +341,7 @@ def revenue_by_client(request):
     try:
         # Get filtered campaigns
         queryset = Campaign.objects.filter(
-            department__name='Digital'
+            department__name='Digital Department'
         ).select_related('client', 'brand')
 
         queryset = apply_financial_filters(queryset, request.query_params)
@@ -404,7 +411,7 @@ def campaign_financials(request):
     try:
         # Get filtered campaigns
         queryset = Campaign.objects.filter(
-            department__name='Digital'
+            department__name='Digital Department'
         ).select_related('client', 'brand')
 
         queryset = apply_financial_filters(queryset, request.query_params)
@@ -428,19 +435,21 @@ def campaign_financials(request):
                 campaign.currency
             )
 
-            # Get service type display name
-            service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
-                campaign.service_type,
-                campaign.service_type
-            ) if campaign.service_type else None
+            # Get service types display names
+            service_types_display = []
+            if campaign.service_types:
+                service_type_dict = dict(Campaign.SERVICE_TYPE_CHOICES)
+                service_types_display = [
+                    service_type_dict.get(st, st) for st in campaign.service_types
+                ]
 
             results.append({
                 'id': campaign.id,
                 'campaign_name': campaign.campaign_name,
                 'client_id': campaign.client.id,
                 'client_name': campaign.client.display_name,
-                'service_type': campaign.service_type,
-                'service_type_display': service_display,
+                'service_types': campaign.service_types or [],
+                'service_types_display': service_types_display,
 
                 # EUR converted values
                 'value_eur': float(value_eur) if value_eur else None,
@@ -534,25 +543,27 @@ def kpis_overview(request):
             if not campaign.start_date or not campaign.end_date:
                 continue
 
-            service = campaign.service_type or 'unknown'
+            services = campaign.service_types if campaign.service_types else ['unknown']
 
             # Calculate delivery time in days
             delivery_days = (campaign.end_date - campaign.start_date).days
 
-            if service not in service_delivery_data:
-                service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
-                    service,
-                    service.replace('_', ' ').title()
-                )
-                service_delivery_data[service] = {
-                    'service_type': service,
-                    'service_display': service_display,
-                    'total_days': 0,
-                    'campaign_count': 0
-                }
+            # Distribute to each service type
+            for service in services:
+                if service not in service_delivery_data:
+                    service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
+                        service,
+                        service.replace('_', ' ').title()
+                    )
+                    service_delivery_data[service] = {
+                        'service_type': service,
+                        'service_display': service_display,
+                        'total_days': 0,
+                        'campaign_count': 0
+                    }
 
-            service_delivery_data[service]['total_days'] += delivery_days
-            service_delivery_data[service]['campaign_count'] += 1
+                service_delivery_data[service]['total_days'] += delivery_days
+                service_delivery_data[service]['campaign_count'] += 1
 
         # Calculate averages
         avg_delivery_by_service = []
@@ -574,28 +585,33 @@ def kpis_overview(request):
         roi_data = {}
 
         for campaign in queryset:
-            service = campaign.service_type or 'unknown'
+            services = campaign.service_types if campaign.service_types else ['unknown']
 
             # Convert to EUR
             profit_eur = convert_to_eur(campaign.profit, campaign.currency) or Decimal('0.00')
             budget_eur = convert_to_eur(campaign.budget_spent, campaign.currency) or Decimal('0.00')
 
-            if service not in roi_data:
-                service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
-                    service,
-                    service.replace('_', ' ').title()
-                )
-                roi_data[service] = {
-                    'service_type': service,
-                    'service_display': service_display,
-                    'total_profit': Decimal('0.00'),
-                    'total_budget': Decimal('0.00'),
-                    'campaign_count': 0
-                }
+            # Split profit and budget among service types if multiple
+            profit_per_service = profit_eur / len(services) if services else profit_eur
+            budget_per_service = budget_eur / len(services) if services else budget_eur
 
-            roi_data[service]['total_profit'] += profit_eur
-            roi_data[service]['total_budget'] += budget_eur
-            roi_data[service]['campaign_count'] += 1
+            for service in services:
+                if service not in roi_data:
+                    service_display = dict(Campaign.SERVICE_TYPE_CHOICES).get(
+                        service,
+                        service.replace('_', ' ').title()
+                    )
+                    roi_data[service] = {
+                        'service_type': service,
+                        'service_display': service_display,
+                        'total_profit': Decimal('0.00'),
+                        'total_budget': Decimal('0.00'),
+                        'campaign_count': 0
+                    }
+
+                roi_data[service]['total_profit'] += profit_per_service
+                roi_data[service]['total_budget'] += budget_per_service
+                roi_data[service]['campaign_count'] += 1
 
         # Calculate ROI percentages
         roi_by_campaign_type = []
