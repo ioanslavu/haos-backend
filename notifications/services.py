@@ -157,3 +157,42 @@ class NotificationService:
                 'new_status': new_status
             }
         )
+
+
+def notify_entity_change_request(request_obj):
+    """
+    Notify all admins when a non-admin requests entity edit/delete.
+
+    Args:
+        request_obj: EntityChangeRequest instance
+    """
+    from api.models import UserProfile
+
+    # Get all admin users (role level >= 1000)
+    admins = UserProfile.objects.filter(role__level__gte=1000).select_related('user', 'role')
+
+    # Determine action word
+    action = 'edit' if request_obj.request_type == 'edit' else 'delete'
+
+    # Get requester name
+    requester_name = (
+        f"{request_obj.requested_by.first_name} {request_obj.requested_by.last_name}".strip()
+        or request_obj.requested_by.email
+    )
+
+    # Create notification for each admin
+    for admin_profile in admins:
+        NotificationService.create_notification(
+            user=admin_profile.user,
+            message=f"{requester_name} requested to {action} entity '{request_obj.entity.display_name}'",
+            notification_type='entity_request',
+            related_object=request_obj,
+            action_url=f"/admin/entity-requests",
+            metadata={
+                'request_type': request_obj.request_type,
+                'entity_id': request_obj.entity.id,
+                'entity_name': request_obj.entity.display_name,
+                'requester_id': request_obj.requested_by.id,
+                'requester_name': requester_name,
+            }
+        )

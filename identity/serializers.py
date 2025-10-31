@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import (
     Entity, EntityRole, SensitiveIdentity, Identifier, AuditLogSensitive,
-    SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone
+    SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone,
+    ClientProfile, ClientProfileHistory
 )
 
 User = get_user_model()
@@ -186,7 +187,7 @@ class EntityListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Entity
         fields = [
-            'id', 'kind', 'kind_display', 'display_name', 'first_name', 'last_name',
+            'id', 'kind', 'kind_display', 'display_name', 'alias_name', 'first_name', 'last_name',
             'stage_name', 'nationality', 'gender', 'email', 'phone', 'profile_photo', 'roles', 'created_at'
         ]
         read_only_fields = ['created_at']
@@ -217,7 +218,7 @@ class EntityDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Entity
         fields = [
-            'id', 'kind', 'kind_display', 'display_name', 'first_name', 'last_name',
+            'id', 'kind', 'kind_display', 'display_name', 'alias_name', 'first_name', 'last_name',
             'stage_name', 'nationality', 'gender', 'email', 'phone', 'profile_photo',
             'iban', 'bank_name', 'bank_branch',
             'address', 'city', 'state', 'zip_code', 'country',
@@ -358,7 +359,7 @@ class EntityCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Entity
         fields = [
-            'id', 'kind', 'display_name', 'first_name', 'last_name', 'stage_name',
+            'id', 'kind', 'display_name', 'alias_name', 'first_name', 'last_name', 'stage_name',
             'nationality', 'gender', 'email', 'phone', 'profile_photo',
             'iban', 'bank_name', 'bank_branch',
             'address', 'city', 'state', 'zip_code', 'country',
@@ -598,3 +599,119 @@ class ClientCompatibilitySerializer(serializers.ModelSerializer):
     def get_placeholders(self, obj):
         """Get placeholders in old format for backward compatibility."""
         return obj.get_placeholders()
+
+
+class ClientProfileHistorySerializer(serializers.ModelSerializer):
+    """Serializer for ClientProfileHistory."""
+
+    changed_by_name = serializers.SerializerMethodField()
+    score_change = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClientProfileHistory
+        fields = [
+            'id', 'client_profile', 'health_score',
+            'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
+            'notes', 'changed_by', 'changed_by_name', 'change_reason',
+            'changed_at', 'score_change'
+        ]
+        read_only_fields = fields  # All fields are read-only for history
+
+    def get_changed_by_name(self, obj):
+        """Return full name of the user who made the change."""
+        if obj.changed_by:
+            return obj.changed_by.get_full_name() or obj.changed_by.email
+        return None
+
+    def get_score_change(self, obj):
+        """Return the score change from previous entry."""
+        return obj.get_score_change()
+
+
+class ClientProfileSerializer(serializers.ModelSerializer):
+    """Serializer for ClientProfile with trend and history."""
+
+    entity_name = serializers.CharField(source='entity.display_name', read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    updated_by_name = serializers.SerializerMethodField()
+    score_trend = serializers.SerializerMethodField()
+    recent_history = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClientProfile
+        fields = [
+            'id', 'entity', 'entity_name', 'department', 'department_name',
+            'health_score', 'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
+            'notes', 'updated_by', 'updated_by_name', 'score_trend', 'recent_history',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'entity_name', 'department_name']
+
+    def get_updated_by_name(self, obj):
+        """Return full name of the user who last updated."""
+        if obj.updated_by:
+            return obj.updated_by.get_full_name() or obj.updated_by.email
+        return None
+
+    def get_score_trend(self, obj):
+        """Return score trend: 'up', 'down', or 'stable'."""
+        return obj.get_score_trend()
+
+    def get_recent_history(self, obj):
+        """Return last 5 history entries."""
+        history = obj.history.order_by('-changed_at')[:5]
+        return ClientProfileHistorySerializer(history, many=True).data
+
+
+class ClientProfileCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating ClientProfile."""
+
+    class Meta:
+        model = ClientProfile
+        fields = [
+            'id', 'entity', 'department', 'health_score',
+            'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
+            'notes'
+        ]
+        read_only_fields = ['id']
+
+    def validate(self, data):
+        """Validate ClientProfile data."""
+        # Ensure scores are within range (1-10) - this is also validated by model
+        for field in ['health_score', 'collaboration_frequency_score', 'feedback_score', 'payment_latency_score']:
+            if field in data and data[field] is not None:
+                if not (1 <= data[field] <= 10):
+                    raise serializers.ValidationError({
+                        field: f"{field} must be between 1 and 10"
+                    })
+
+        # For non-admins, ensure they can only create/update profiles for their own department
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            profile = getattr(user, 'profile', None)
+
+            if profile and not profile.is_admin:
+                # Non-admins can only work with their own department
+                if 'department' in data and data['department'] != profile.department:
+                    raise serializers.ValidationError({
+                        'department': "You can only manage client profiles for your own department"
+                    })
+
+        return data
+
+    def create(self, validated_data):
+        """Create ClientProfile and set updated_by."""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['updated_by'] = request.user
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        """Update ClientProfile and set updated_by."""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['updated_by'] = request.user
+
+        return super().update(instance, validated_data)

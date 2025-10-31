@@ -34,6 +34,10 @@ cryptography  # For encrypting sensitive data (CNP, etc.)
 Pillow
 django-ratelimit
 
+# AWS S3 Storage
+django-storages[s3]
+boto3
+
 orjson
 drf-orjson-renderer
 

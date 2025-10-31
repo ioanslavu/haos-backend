@@ -1,0 +1,1150 @@
+[
+  {
+    "kind": "PF",
+    "display_name": "Ana Maria Stancu",
+    "first_name": "Ana",
+    "last_name": "Maria Stancu",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/ana_maria_stancu_C0ysnZ8_CJt3JCx_3gDA2kq.jpg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Andrei Barz",
+    "first_name": "Andrei",
+    "last_name": "Barz",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/andrei_barz_7MYevKN_36KSkz2_0gZS5SY.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Bryana Holinger",
+    "first_name": "Bryana",
+    "last_name": "Holinger",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/bryana_holinger_jkjuaYc_QnEjShh_Kuytrl8.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "bryanaholingher",
+        "url": "https://www.instagram.com/bryanaholingher",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Cabron",
+    "first_name": "Alexandru",
+    "last_name": "Cabuz",
+    "stage_name": "Cabron",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/cabron_h2cbwXT_LiHTX7p_0CEFDty.jpeg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "cabronair",
+        "url": "https://www.instagram.com/cabronair/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "0cw3wLz2S9ryZXmL0vWWQF",
+        "url": "https://open.spotify.com/artist/0cw3wLz2S9ryZXmL0vWWQF",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Carlos Enrique LiToo",
+    "first_name": "Carlos",
+    "last_name": "Enrique LiToo",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/carlos_enrique_litoo_Gg4XxXM_VLl1ak1_NO2JRVL.jpg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Cristian Porcari",
+    "first_name": "Cristian",
+    "last_name": "Porcari",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/cristian_porcari_7Ikd6wo_lKJKoXj_M4oUBe7.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "porcaricristian",
+        "url": "https://www.instagram.com/porcaricristian",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "2CYdLJs282GH7B65QAZEA7",
+        "url": "https://open.spotify.com/artist/2CYdLJs282GH7B65QAZEA7",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Darius Dragoi",
+    "first_name": "Darius",
+    "last_name": "Dragoi",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/darius_dragoi_dxALhpN_TqS0LKo_CNGNURC.jpeg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Dorian",
+    "first_name": "",
+    "last_name": "Micu",
+    "stage_name": "Dorian",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/dorian_PVpX6Y5_1UMZHJJ_1APhF4D.jpeg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "therealdorian",
+        "url": "https://www.instagram.com/therealdorian/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "4k8iiohajvpUG0qvetjHC1",
+        "url": "https://open.spotify.com/artist/4k8iiohajvpUG0qvetjHC1",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Edy Anghelescu",
+    "first_name": "Edy",
+    "last_name": "Anghelescu",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/edy_anghelescu_mRFxsuw_veNrBSX_gZy8m2J.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "anghelescuedy",
+        "url": "https://www.instagram.com/anghelescuedy/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Feli",
+    "first_name": "Felicia",
+    "last_name": "Donose",
+    "stage_name": "Feli",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/feli_2pUMSbg_KhjVcSy_VnURXuL.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "felidonoseofficial",
+        "url": "https://www.instagram.com/felidonoseofficial/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "5ckrQzJjIPDPS6EM4V1nmX",
+        "url": "https://open.spotify.com/artist/5ckrQzJjIPDPS6EM4V1nmX",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Florin Boka",
+    "first_name": "Florin",
+    "last_name": "Boka",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/florin_boka_W1iaHa4_mhytoY4_RCLZxs0.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Gabriel Stanoiu",
+    "first_name": "Gabriel",
+    "last_name": "Stanoiu",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/gabriel_stanoiu_yEAhQmq_nEgOBMu_uNytWa3.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Iova",
+    "first_name": "Miruna",
+    "last_name": "Iova",
+    "stage_name": "Iova",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/iova_4AoNCG7_8oY64OP_KghLwJy.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "iovaofficial",
+        "url": "https://www.instagram.com/iovaofficial/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "6ywdLBfxLvrNw4l25x4Q0O",
+        "url": "https://open.spotify.com/artist/6ywdLBfxLvrNw4l25x4Q0O",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Jean Gavril",
+    "first_name": "Jean",
+    "last_name": "Gavril Gavrila",
+    "stage_name": "Jean Gavril",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/jean_gavril_Qdxfq3w_w4hKr0P_vpVlfuA.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "jeangavril",
+        "url": "https://www.instagram.com/jeangavril/?hl=ro",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "3mhjDUn6g7D85To8ywwqbN",
+        "url": "https://open.spotify.com/artist/3mhjDUn6g7D85To8ywwqbN",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Juno",
+    "first_name": "Alexandru",
+    "last_name": "Stancu",
+    "stage_name": "Juno",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/juno_PqXnnG7_Uljk44x_KNNTJtL.jpeg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "junorakis",
+        "url": "https://www.instagram.com/junorakis/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "2oCQSda6vA1t27B5RWXYwb",
+        "url": "https://open.spotify.com/artist/2oCQSda6vA1t27B5RWXYwb",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Lucian Nagy",
+    "first_name": "Lucian",
+    "last_name": "Nagy",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/lucian_nagy_RBjeS8A_bGXrmzW_s9YsTUq.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Mark Stam",
+    "first_name": "Mark",
+    "last_name": "Stam",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/mark_stam_anV8LPt_Y7cBIqy_skcXEh9.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "markstam_official",
+        "url": "https://www.instagram.com/markstam_official/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "2TfjCSwYNNsUvw3uhjK9mh",
+        "url": "https://open.spotify.com/artist/2TfjCSwYNNsUvw3uhjK9mh",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Oluwatobi Ibitoye",
+    "first_name": "Oluwatobi",
+    "last_name": "Ibitoye",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/oluwatobi_ibitoye_3Aw5KrH_Px0Hpmw_aWilrl5.jpg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Paul Damixie",
+    "first_name": "Paul",
+    "last_name": "Damixie",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/paul_damixie_FN7hC7Q_XBZdCsZ_W5Z4sRL.jpeg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "pauldamixie",
+        "url": "https://www.instagram.com/pauldamixie/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "0nkCaGdwKdFsufB3GbvCdk",
+        "url": "https://open.spotify.com/artist/0nkCaGdwKdFsufB3GbvCdk",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Radio Killer",
+    "first_name": "Radio",
+    "last_name": "Killer",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/radio_killer_XQ3BhwO_zin67Tu_ruPKn8X.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "radiokilleron",
+        "url": "https://www.instagram.com/radiokilleron/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "3amXI07XbX3gDkfrqMsLa9",
+        "url": "https://open.spotify.com/artist/3amXI07XbX3gDkfrqMsLa9",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Roland Kiss",
+    "first_name": "Roland",
+    "last_name": "Kiss",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/roland_kiss_Kuy0d4Z_Q3j2bMW_NoqdgLz.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Serban Cazan",
+    "first_name": "Serban",
+    "last_name": "Cazan",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/serban_cazan_WAkIWmC_NwXnjXA_IZ9EDYD.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Smiley",
+    "first_name": "Andrei",
+    "last_name": "Tiberiu Maria",
+    "stage_name": "Smiley",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/smiley_qXk8ND6_eydPvLQ_MsnSRCL.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "smiley_omul",
+        "url": "https://www.instagram.com/smiley_omul/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "3gvNMbcnvmnjGaG6hvJfSH",
+        "url": "https://open.spotify.com/artist/3gvNMbcnvmnjGaG6hvJfSH",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Sore",
+    "first_name": "Sorina",
+    "last_name": "Mihalache",
+    "stage_name": "Sore",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/sore_zuha4PT_gnqJC6V_SO8Jd4B.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "soreonline",
+        "url": "https://www.instagram.com/soreonline/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "3dmuXOSgI3EMfcKhufthu3",
+        "url": "https://open.spotify.com/artist/3dmuXOSgI3EMfcKhufthu3",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Teodor Mirea",
+    "first_name": "Teodor",
+    "last_name": "Mirea",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/teodor_mirea_EWmQuRC_X6EJqkb_kQIKzz5.jpg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Theodor Andrei",
+    "first_name": "Theodor",
+    "last_name": "Andrei",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/theodor_andrei_0wJW0lx_APdqLKs_lB9AtqZ.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "theodorandreiofficial",
+        "url": "https://www.instagram.com/theodorandreiofficial/",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "3c0hzs6WpyGk7gLwSDCBmf",
+        "url": "https://open.spotify.com/artist/3c0hzs6WpyGk7gLwSDCBmf",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Vasile Bulgaru",
+    "first_name": "Vasile",
+    "last_name": "Bulgaru",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/vasile_bulgaru_i1tYlg8_rWqDqqC_bEYJQyn.jpeg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Villia",
+    "first_name": "",
+    "last_name": "",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/villia_mY53iv4_X675Hh2_VHiIBw6.jpg",
+    "roles": [
+      {
+        "role": "artist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": [
+      {
+        "platform": "instagram",
+        "handle": "villia.official",
+        "url": "https://www.instagram.com/villia.official",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      },
+      {
+        "platform": "spotify",
+        "handle": "4d9x0N7i1UeLaAknvbeOgS",
+        "url": "https://open.spotify.com/artist/4d9x0N7i1UeLaAknvbeOgS",
+        "display_name": "",
+        "follower_count": null,
+        "is_verified": false,
+        "is_primary": false,
+        "notes": ""
+      }
+    ]
+  },
+  {
+    "kind": "PF",
+    "display_name": "Vizi Imre",
+    "first_name": "Vizi",
+    "last_name": "Imre",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/vizi_imre_jkgd0cs_Q8BghyR_nGbZpCx.jpg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Vlad Ciresan",
+    "first_name": "Vlad",
+    "last_name": "Ciresan",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/vlad_ciresan_kUvo1Pk_s09anSq_SviIu7R.jpg",
+    "roles": [
+      {
+        "role": "lyricist",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Vlad Popescu",
+    "first_name": "Vlad",
+    "last_name": "Popescu",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/vlad_popescu_CpDOr03_pmEiE4W_KeuyAKN.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  },
+  {
+    "kind": "PF",
+    "display_name": "Vladimir Coman-Popescu",
+    "first_name": "Vladimir",
+    "last_name": "Coman-Popescu",
+    "stage_name": "",
+    "nationality": "Romanian",
+    "gender": null,
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "notes": "",
+    "profile_photo_url": "https://haos-s3-bucket.s3.amazonaws.com/media/entity_photos/vladimir_coman-popescu_QxU601g_xxh6Aeu_85oD3pN.jpg",
+    "roles": [
+      {
+        "role": "producer",
+        "primary_role": true,
+        "is_internal": true
+      }
+    ],
+    "social_media": []
+  }
+]

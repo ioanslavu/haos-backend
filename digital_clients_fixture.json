@@ -1,0 +1,1511 @@
+[
+  {
+    "kind": "PJ",
+    "display_name": "176 Studios",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Studio 176",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "info@176studio.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "ABC PLUS MEDIA SA",
+    "alias_name": "National TV",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": []
+  },
+  {
+    "kind": "PJ",
+    "display_name": "ASOCIATIA KIDS MUSIC PRODUCTION",
+    "alias_name": "Alexxa",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Alex Bancila",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "alexbancila@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "40745029900",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Alina Sorescu",
+    "alias_name": "Alina Sorescu",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Alina Sorescu",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "sorescu.alina@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "40723825099",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Athena Scarlett",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Athena Scarlett",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "athena@eternitymedia.net",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "BG Media",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Son Ho Van",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "hovanson.work@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "BRAGART MEDIA SERV SRL",
+    "alias_name": "Ada Morar",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Vlad Braga",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "vbragovski@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "40758975148",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "COMPANIA DE EVENIMENTE ZURLI SRL",
+    "alias_name": "Gasca Zurli",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": []
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Codu Penal",
+    "alias_name": "Codu Penal",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": []
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Coleridge Tillman",
+    "alias_name": "Coleridge Tillman",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Peter Coquillard",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [],
+        "phones": [
+          {
+            "phone": "19178260824",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Crew Madia",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Diệu Minh Hoàng Nguyễn",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "support@crewmedia.net",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Dabeat Creation",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Christine Grace",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "contact@dabeatcreation.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Dominique Ilie",
+    "alias_name": "Dominique Ilie",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Claudiu Ilie",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [],
+        "phones": [
+          {
+            "phone": "19497059443",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "FURTHER EAST RECORDS SRL",
+    "alias_name": "SHB",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Luca Stefu",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "lucastefu@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "19496905065",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "HG MEDIA",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "HG Media Team",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "quynhld@hgmedia.vn",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "HITKEND",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Team Hitkend",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "partners@hitkend.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "HN Media",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "XMG",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "ceo@hnmedia.net",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Huta Media",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Kim Dong",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "manager@hutavn.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "KMC Media",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Tai Trong",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "trongtai89kmc@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Lavid Entertainment",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Claire Le",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "leclaire0pr.lavid@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Litoo",
+    "alias_name": "Litoo",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": []
+  },
+  {
+    "kind": "PJ",
+    "display_name": "MALWYN STUDIO",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Alice Nguyen",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "malwynstudio@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "MILK & HONEY RECORD LLC.",
+    "alias_name": "Milk & Honey Records",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "label",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Dana Shayegan",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "dana@milkhoneyla.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "13109885120",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Magic Music",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Jeff Lu",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "magicmusicllc@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Maria Coman",
+    "alias_name": "Maria Coman",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "artist",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Maria Coman",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "mariacomanoffice@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "40770985302",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Max Media",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Tú Anh Phùng",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "tuanh.er@maxmediavn.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Melosy LTD",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Châu Phạm",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "chau.pham@emvn.co",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Ms Boone",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Trinh Nguyễn Thị",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "kieutrinhh9999@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "PEOPLE WANT TO DANCE",
+    "alias_name": "People Want To Dance",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "label",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Andreas Weitkaemper",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "aw@peoplewanttodance.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Pine Entertainment",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Contact",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "Hailey Nguyen",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "RAKISS ENT SRL",
+    "alias_name": "Elixir Records",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "label",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Alex Stancu",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "alex.stancu.petru@gmail.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "40770223784",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "SOUNDFEED SA",
+    "alias_name": "Creator Records",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      },
+      {
+        "role": "label",
+        "primary_role": false,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Radu Cristea",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "raducristea@creator-records.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": [
+          {
+            "phone": "40751237750",
+            "label": "Work",
+            "is_primary": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Simple Sollution",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Claire Tran",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "contact@simplesolution.co",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Unicorn LTD",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Ngô Văn Đạt",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "founder@bigbeatmusic.group",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  },
+  {
+    "kind": "PJ",
+    "display_name": "Unitech Media",
+    "alias_name": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "city": "",
+    "state": "",
+    "zip_code": "",
+    "country": "Romania",
+    "company_registration_number": "",
+    "vat_number": "",
+    "iban": "",
+    "bank_name": "",
+    "bank_branch": "",
+    "notes": "",
+    "roles": [
+      {
+        "role": "digital",
+        "primary_role": true,
+        "is_internal": false
+      }
+    ],
+    "contact_persons": [
+      {
+        "name": "Lily Phan",
+        "role": "partner",
+        "engagement_stage": "",
+        "sentiment": "",
+        "notes": "",
+        "emails": [
+          {
+            "email": "lily@unitechmusic.com",
+            "label": "Work",
+            "is_primary": true
+          }
+        ],
+        "phones": []
+      }
+    ]
+  }
+]

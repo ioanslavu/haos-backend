@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'impersonate',  # User impersonation for role testing
     'auditlog',  # Audit trail for model changes
     'channels',  # WebSocket support
+    'storages',  # AWS S3 storage backend
 
     # Allauth
     'allauth',
@@ -161,6 +162,37 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files (user uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ===================================================
+# AWS S3 STORAGE CONFIGURATION
+# ===================================================
+USE_S3 = config('USE_S3', default=False, cast=bool)
+
+if USE_S3:
+    # AWS Credentials
+    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+
+    # S3 Storage Settings
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',  # 1 day cache
+    }
+
+    # Media files location in S3
+    AWS_MEDIA_LOCATION = 'media'
+    AWS_PRIVATE_MEDIA_LOCATION = 'private'
+
+    # Use S3 for media files
+    DEFAULT_FILE_STORAGE = 'config.storage_backends.MediaStorage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_MEDIA_LOCATION}/'
+
+    # Optional: Use S3 for static files too (uncomment if needed)
+    # AWS_STATIC_LOCATION = 'static'
+    # STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_STATIC_LOCATION}/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -8,14 +8,16 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from .models import (
     Entity, EntityRole, SensitiveIdentity, Identifier, AuditLogSensitive,
-    SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone
+    SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone,
+    ClientProfile, ClientProfileHistory
 )
 from .serializers import (
     EntityListSerializer, EntityDetailSerializer, EntityCreateUpdateSerializer,
     EntityRoleSerializer, IdentifierSerializer, SensitiveIdentitySerializer,
     SensitiveIdentityRevealSerializer, AuditLogSensitiveSerializer,
     ClientCompatibilitySerializer, SocialMediaAccountSerializer,
-    ContactPersonSerializer
+    ContactPersonSerializer, ClientProfileSerializer,
+    ClientProfileCreateUpdateSerializer, ClientProfileHistorySerializer
 )
 
 
@@ -574,3 +576,203 @@ class ContactPersonViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Optimize with prefetch_related for emails and phones."""
         return super().get_queryset().prefetch_related('emails', 'phones').select_related('entity')
+
+
+class ClientProfileFilter(django_filters.FilterSet):
+    """Filter for ClientProfile model."""
+
+    entity = django_filters.NumberFilter()
+    department = django_filters.NumberFilter()
+    min_health_score = django_filters.NumberFilter(field_name='health_score', lookup_expr='gte')
+    max_health_score = django_filters.NumberFilter(field_name='health_score', lookup_expr='lte')
+
+    class Meta:
+        model = ClientProfile
+        fields = ['entity', 'department']
+
+
+class ClientProfileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for ClientProfile model.
+
+    RBAC:
+    - Users can only see and edit profiles for their department
+    - Admins can see and edit profiles for all departments
+    """
+
+    queryset = ClientProfile.objects.all()
+    permission_classes = [IsAuthenticated, IsNotGuest]
+    filterset_class = ClientProfileFilter
+    filter_backends = [
+        django_filters.DjangoFilterBackend,
+        filters.OrderingFilter
+    ]
+    ordering_fields = ['health_score', 'updated_at', 'created_at']
+    ordering = ['-updated_at']
+
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action in ['create', 'update', 'partial_update']:
+            return ClientProfileCreateUpdateSerializer
+        return ClientProfileSerializer
+
+    def get_queryset(self):
+        """
+        Filter queryset based on user's department.
+        - Admins see all profiles
+        - Users see only their department's profiles
+        """
+        queryset = super().get_queryset().select_related(
+            'entity', 'department', 'updated_by'
+        ).prefetch_related('history')
+
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+
+        if not profile:
+            return queryset.none()
+
+        # Admins see all profiles
+        if profile.is_admin:
+            return queryset
+
+        # Users with department see only their department's profiles
+        if profile.department:
+            return queryset.filter(department=profile.department)
+
+        # Users without department see nothing
+        return queryset.none()
+
+    @action(detail=False, methods=['get'])
+    def by_entity(self, request):
+        """
+        Get client profile for a specific entity in user's department.
+        For admins, returns all department profiles for that entity.
+        """
+        entity_id = request.query_params.get('entity_id')
+        if not entity_id:
+            return Response(
+                {'error': 'entity_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        queryset = self.get_queryset().filter(entity_id=entity_id)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Get full history for a client profile."""
+        profile = self.get_object()
+        history = profile.history.order_by('-changed_at')
+
+        page = self.paginate_queryset(history)
+        if page is not None:
+            serializer = ClientProfileHistorySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ClientProfileHistorySerializer(history, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """
+        Get client health statistics for user's department.
+        Admins see stats for all departments or a specific department.
+        """
+        user = request.user
+        profile = getattr(user, 'profile', None)
+
+        if not profile:
+            return Response({'error': 'User profile not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get queryset with department filtering
+        queryset = self.get_queryset()
+
+        # For admins, allow filtering by specific department
+        if profile.is_admin:
+            dept_id = request.query_params.get('department_id')
+            if dept_id:
+                queryset = queryset.filter(department_id=dept_id)
+
+        # Calculate stats
+        total_profiles = queryset.count()
+        profiles_with_scores = queryset.exclude(health_score__isnull=True)
+
+        stats = {
+            'total_profiles': total_profiles,
+            'profiles_with_scores': profiles_with_scores.count(),
+            'average_health_score': None,
+            'score_distribution': {},
+            'trend_distribution': {}
+        }
+
+        if profiles_with_scores.exists():
+            from django.db.models import Avg
+            avg_score = profiles_with_scores.aggregate(Avg('health_score'))['health_score__avg']
+            stats['average_health_score'] = round(avg_score, 2) if avg_score else None
+
+            # Score distribution (1-3: Poor, 4-6: Fair, 7-10: Good)
+            poor = profiles_with_scores.filter(health_score__lte=3).count()
+            fair = profiles_with_scores.filter(health_score__gte=4, health_score__lte=6).count()
+            good = profiles_with_scores.filter(health_score__gte=7).count()
+
+            stats['score_distribution'] = {
+                'poor': poor,
+                'fair': fair,
+                'good': good
+            }
+
+            # Trend distribution
+            trends = {'up': 0, 'down': 0, 'stable': 0}
+            for profile in profiles_with_scores:
+                trend = profile.get_score_trend()
+                trends[trend] += 1
+
+            stats['trend_distribution'] = trends
+
+        return Response(stats)
+
+
+class ClientProfileHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only ViewSet for ClientProfileHistory.
+    Users can only see history for profiles in their department.
+    """
+
+    queryset = ClientProfileHistory.objects.all()
+    serializer_class = ClientProfileHistorySerializer
+    permission_classes = [IsAuthenticated, IsNotGuest]
+    filter_backends = [
+        django_filters.DjangoFilterBackend,
+        filters.OrderingFilter
+    ]
+    filterset_fields = ['client_profile', 'changed_by']
+    ordering_fields = ['changed_at']
+    ordering = ['-changed_at']
+
+    def get_queryset(self):
+        """
+        Filter history based on user's department access to the profile.
+        """
+        queryset = super().get_queryset().select_related(
+            'client_profile__entity',
+            'client_profile__department',
+            'changed_by'
+        )
+
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+
+        if not profile:
+            return queryset.none()
+
+        # Admins see all history
+        if profile.is_admin:
+            return queryset
+
+        # Users see history for their department's profiles only
+        if profile.department:
+            return queryset.filter(client_profile__department=profile.department)
+
+        return queryset.none()

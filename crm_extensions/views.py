@@ -7,13 +7,14 @@ from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
 
-from .models import Task, Activity, CampaignMetrics
+from .models import Task, Activity, CampaignMetrics, EntityChangeRequest
 from .serializers import (
     TaskSerializer,
     TaskCreateUpdateSerializer,
     ActivitySerializer,
     ActivityCreateUpdateSerializer,
     CampaignMetricsSerializer,
+    EntityChangeRequestSerializer,
 )
 from api.permissions import HasDepartmentAccess
 
@@ -53,12 +54,21 @@ class TaskViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
-        # Filter by user's department if not admin
-        if hasattr(user, 'userprofile') and not user.userprofile.is_admin:
-            if user.userprofile.department:
-                queryset = queryset.filter(
-                    Q(department=user.userprofile.department) | Q(department__isnull=True)
-                )
+        # Role-based filtering (similar to campaigns)
+        if hasattr(user, 'profile'):
+            if user.profile.is_admin:
+                # Admins see everything
+                pass
+            elif user.profile.is_manager:
+                # Managers see all tasks in their department
+                if user.profile.department:
+                    queryset = queryset.filter(department=user.profile.department)
+            elif user.profile.is_employee:
+                # Employees see only tasks assigned to them
+                queryset = queryset.filter(assigned_to_users=user)
+            else:
+                # Guests see nothing
+                queryset = queryset.none()
 
         # Additional query params
         is_overdue = self.request.query_params.get('is_overdue')
@@ -76,18 +86,40 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         my_tasks = self.request.query_params.get('my_tasks')
         if my_tasks == 'true':
-            queryset = queryset.filter(assigned_to=user)
+            queryset = queryset.filter(assigned_to_users=user)
+
+        # Support filtering by multiple assignees
+        assigned_to_in = self.request.query_params.get('assigned_to__in')
+        if assigned_to_in:
+            user_ids = [int(uid) for uid in assigned_to_in.split(',')]
+            queryset = queryset.filter(assigned_to_users__id__in=user_ids).distinct()
 
         # Optimize query with select_related and prefetch_related
         queryset = queryset.select_related(
             'campaign', 'entity', 'contract',
             'assigned_to', 'created_by', 'department', 'parent_task'
-        ).prefetch_related('blocks_tasks', 'subtasks')
+        ).prefetch_related('blocks_tasks', 'subtasks', 'assigned_to_users')
 
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        # Auto-assign creator to task and set department to digital
+        user = self.request.user
+        department = None
+
+        # Get digital department
+        from api.models import Department
+        try:
+            department = Department.objects.get(code='digital')
+        except Department.DoesNotExist:
+            pass
+
+        # Save task with creator
+        task = serializer.save(created_by=user, department=department)
+
+        # Auto-assign creator to task if no assignees specified
+        if not task.assigned_to_users.exists():
+            task.assigned_to_users.add(user)
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
@@ -377,3 +409,95 @@ class CampaignMetricsViewSet(viewsets.ModelViewSet):
             return Response(response_data, status=status.HTTP_207_MULTI_STATUS)
 
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class EntityChangeRequestViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for entity change requests.
+    - Non-admins can: create requests, view their own requests
+    - Admins can: view all requests, approve/reject
+    """
+    serializer_class = EntityChangeRequestSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['message', 'admin_notes', 'entity__display_name']
+    ordering_fields = ['created_at', 'status']
+    ordering = ['-created_at']
+
+    filterset_fields = {
+        'status': ['exact', 'in'],
+        'request_type': ['exact'],
+        'entity': ['exact'],
+        'requested_by': ['exact'],
+    }
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Admins see all requests
+        if hasattr(user, 'profile') and user.profile.is_admin:
+            return EntityChangeRequest.objects.all()
+
+        # Non-admins see only their own requests
+        return EntityChangeRequest.objects.filter(requested_by=user)
+
+    def perform_create(self, serializer):
+        # Auto-assign the current user as requester
+        serializer.save(requested_by=self.request.user)
+
+        # Send notification to admins
+        from notifications.services import notify_entity_change_request
+        request_obj = serializer.instance
+        notify_entity_change_request(request_obj)
+
+    @action(detail=True, methods=['post'], url_path='approve')
+    def approve(self, request, pk=None):
+        """
+        Admin approves the request.
+        Requires admin permission.
+        """
+        user = request.user
+
+        # Check if user is admin
+        if not (hasattr(user, 'profile') and user.profile.is_admin):
+            return Response(
+                {'error': 'Only admins can approve requests'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        change_request = self.get_object()
+        admin_notes = request.data.get('admin_notes', '')
+
+        # Approve the request
+        change_request.approve(user, admin_notes)
+
+        # TODO: Send notification to requester
+
+        serializer = self.get_serializer(change_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='reject')
+    def reject(self, request, pk=None):
+        """
+        Admin rejects the request.
+        Requires admin permission.
+        """
+        user = request.user
+
+        # Check if user is admin
+        if not (hasattr(user, 'profile') and user.profile.is_admin):
+            return Response(
+                {'error': 'Only admins can reject requests'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        change_request = self.get_object()
+        admin_notes = request.data.get('admin_notes', '')
+
+        # Reject the request
+        change_request.reject(user, admin_notes)
+
+        # TODO: Send notification to requester
+
+        serializer = self.get_serializer(change_request)
+        return Response(serializer.data)

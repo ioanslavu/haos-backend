@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     EntityViewSet, SensitiveIdentityViewSet, IdentifierViewSet,
     AuditLogSensitiveViewSet, ClientCompatibilityViewSet, SocialMediaAccountViewSet,
-    ContactPersonViewSet
+    ContactPersonViewSet, ClientProfileViewSet, ClientProfileHistoryViewSet
 )
 
 router = DefaultRouter()
@@ -13,6 +13,8 @@ router.register(r'identifiers', IdentifierViewSet)
 router.register(r'audit-logs', AuditLogSensitiveViewSet)
 router.register(r'social-media-accounts', SocialMediaAccountViewSet)
 router.register(r'contact-persons', ContactPersonViewSet)
+router.register(r'client-profiles', ClientProfileViewSet)
+router.register(r'client-profile-history', ClientProfileHistoryViewSet)
 router.register(r'clients', ClientCompatibilityViewSet, basename='client')  # Backward compatibility
 
 app_name = 'identity'

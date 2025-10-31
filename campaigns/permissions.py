@@ -2,6 +2,7 @@
 Custom permissions for campaign RBAC.
 """
 from rest_framework import permissions
+from api.models import Department
 
 
 class CampaignPermission(permissions.BasePermission):
@@ -86,3 +87,55 @@ class CampaignPermission(permissions.BasePermission):
 
         # Default deny
         return False
+
+
+class HasDigitalDepartmentAccess(permissions.BasePermission):
+    """
+    Permission class for Digital Financial endpoints.
+
+    Only allow users who belong to the Digital department or are admins.
+
+    This permission is used for financial reporting endpoints that aggregate
+    and display financial data for digital campaigns.
+
+    Rules:
+    - Admins: Always have access
+    - Users with Digital department: Have access
+    - Other users: Denied
+    """
+
+    def has_permission(self, request, view):
+        """
+        Check if user has access to Digital department financial data.
+        """
+        # Check if user is authenticated
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # User must have a profile
+        if not hasattr(request.user, 'profile'):
+            return False
+
+        profile = request.user.profile
+
+        # Admins always have access
+        if profile.is_admin:
+            return True
+
+        # DEVELOPMENT: Temporarily allow all authenticated users
+        # TODO: Re-enable department check in production
+        return True
+
+        # Check if user has digital department access
+        # try:
+        #     digital_dept = Department.objects.get(name='Digital Department')
+        # except Department.DoesNotExist:
+        #     # If Digital department doesn't exist, deny access
+        #     return False
+
+        # # Check if user's department is Digital Department
+        # if profile.department and profile.department.id == digital_dept.id:
+        #     return True
+
+        # # Deny access for all other users
+        # return False

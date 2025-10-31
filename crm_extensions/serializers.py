@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Task, Activity, CampaignMetrics
+from .models import Task, Activity, CampaignMetrics, EntityChangeRequest
 from campaigns.models import Campaign
 from identity.models import Entity
 from contracts.models import Contract
@@ -12,7 +12,8 @@ class TaskSerializer(serializers.ModelSerializer):
     """
     Serializer for Task model with nested relationship details.
     """
-    assigned_to_detail = serializers.SerializerMethodField(read_only=True)
+    assigned_to_detail = serializers.SerializerMethodField(read_only=True)  # DEPRECATED
+    assigned_to_users_detail = serializers.SerializerMethodField(read_only=True)
     created_by_detail = serializers.SerializerMethodField(read_only=True)
     campaign_detail = serializers.SerializerMethodField(read_only=True)
     entity_detail = serializers.SerializerMethodField(read_only=True)
@@ -31,6 +32,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'task_type',
             'status',
             'priority',
+            'tag',
 
             # Relationships
             'campaign',
@@ -41,8 +43,10 @@ class TaskSerializer(serializers.ModelSerializer):
             'contract_detail',
 
             # Assignment
-            'assigned_to',
-            'assigned_to_detail',
+            'assigned_to',  # DEPRECATED
+            'assigned_to_detail',  # DEPRECATED
+            'assigned_to_users',
+            'assigned_to_users_detail',
             'created_by',
             'created_by_detail',
             'department',
@@ -51,6 +55,7 @@ class TaskSerializer(serializers.ModelSerializer):
             # Timeline
             'due_date',
             'reminder_date',
+            'follow_up_reminder_sent',
             'started_at',
             'completed_at',
 
@@ -75,9 +80,10 @@ class TaskSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['created_at', 'updated_at', 'started_at', 'completed_at']
+        read_only_fields = ['created_at', 'updated_at', 'started_at', 'completed_at', 'follow_up_reminder_sent']
 
     def get_assigned_to_detail(self, obj):
+        # DEPRECATED: Use get_assigned_to_users_detail instead
         if obj.assigned_to:
             return {
                 'id': obj.assigned_to.id,
@@ -85,6 +91,16 @@ class TaskSerializer(serializers.ModelSerializer):
                 'full_name': f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}".strip() or obj.assigned_to.email
             }
         return None
+
+    def get_assigned_to_users_detail(self, obj):
+        return [
+            {
+                'id': user.id,
+                'email': user.email,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.email
+            }
+            for user in obj.assigned_to_users.all()
+        ]
 
     def get_created_by_detail(self, obj):
         if obj.created_by:
@@ -137,10 +153,12 @@ class TaskCreateUpdateSerializer(serializers.ModelSerializer):
             'task_type',
             'status',
             'priority',
+            'tag',
             'campaign',
             'entity',
             'contract',
-            'assigned_to',
+            'assigned_to',  # DEPRECATED
+            'assigned_to_users',
             'department',
             'due_date',
             'reminder_date',
@@ -410,4 +428,60 @@ class CampaignWithMetricsSerializer(serializers.ModelSerializer):
         latest = obj.metrics_history.order_by('-recorded_date').first()
         if latest:
             return CampaignMetricsSerializer(latest).data
+        return None
+
+
+class EntityChangeRequestSerializer(serializers.ModelSerializer):
+    """
+    Serializer for EntityChangeRequest with user and entity details.
+    """
+    requested_by_detail = serializers.SerializerMethodField(read_only=True)
+    reviewed_by_detail = serializers.SerializerMethodField(read_only=True)
+    entity_detail = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = EntityChangeRequest
+        fields = [
+            'id',
+            'entity',
+            'entity_detail',
+            'request_type',
+            'requested_by',
+            'requested_by_detail',
+            'message',
+            'status',
+            'reviewed_by',
+            'reviewed_by_detail',
+            'reviewed_at',
+            'admin_notes',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['requested_by', 'status', 'reviewed_by', 'reviewed_at']
+
+    def get_requested_by_detail(self, obj):
+        if obj.requested_by:
+            return {
+                'id': obj.requested_by.id,
+                'email': obj.requested_by.email,
+                'full_name': f"{obj.requested_by.first_name} {obj.requested_by.last_name}".strip() or obj.requested_by.email
+            }
+        return None
+
+    def get_reviewed_by_detail(self, obj):
+        if obj.reviewed_by:
+            return {
+                'id': obj.reviewed_by.id,
+                'email': obj.reviewed_by.email,
+                'full_name': f"{obj.reviewed_by.first_name} {obj.reviewed_by.last_name}".strip() or obj.reviewed_by.email
+            }
+        return None
+
+    def get_entity_detail(self, obj):
+        if obj.entity:
+            return {
+                'id': obj.entity.id,
+                'display_name': obj.entity.display_name,
+                'kind': obj.entity.kind,
+            }
         return None

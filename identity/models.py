@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -34,6 +34,14 @@ class Entity(models.Model):
         max_length=255,
         db_index=True,
         help_text="Display name for the entity"
+    )
+
+    alias_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Alternative name or alias for the entity"
     )
 
     # Name fields for Physical Persons
@@ -1300,3 +1308,236 @@ class ContactPhone(models.Model):
 
     def __str__(self):
         return self.phone
+
+
+class ClientProfile(models.Model):
+    """
+    Department-specific client health and reliability profile.
+    Each department maintains their own view of client health.
+    Based on collaboration frequency, feedback quality, and payment latency.
+    """
+
+    entity = models.ForeignKey(
+        Entity,
+        on_delete=models.CASCADE,
+        related_name='client_profiles',
+        help_text="The client entity this profile belongs to"
+    )
+
+    department = models.ForeignKey(
+        'api.Department',
+        on_delete=models.CASCADE,
+        related_name='client_profiles',
+        help_text="The department this profile belongs to"
+    )
+
+    # Overall health score (1-10)
+    health_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        db_index=True,
+        help_text="Overall client health score (1-10). Can be manually set or auto-calculated."
+    )
+
+    # Component scores (1-10) - for future auto-calculation
+    collaboration_frequency_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Score based on how often we work with this client (1-10)"
+    )
+
+    feedback_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Score based on client feedback quality and responsiveness (1-10)"
+    )
+
+    payment_latency_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Score based on payment timeliness (1-10, 10=always on time)"
+    )
+
+    # Context and notes
+    notes = models.TextField(
+        blank=True,
+        help_text="Notes about this client's health score and reliability"
+    )
+
+    # Tracking
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='client_profiles_updated',
+        help_text="Last user who updated this profile"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['entity', 'department']
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['entity', 'department']),
+            models.Index(fields=['department', 'health_score']),
+            models.Index(fields=['health_score']),
+        ]
+        verbose_name = "Client Profile"
+        verbose_name_plural = "Client Profiles"
+
+    def __str__(self):
+        score_text = f"{self.health_score}/10" if self.health_score else "No score"
+        return f"{self.entity.display_name} - {self.department.name} ({score_text})"
+
+    def get_score_trend(self):
+        """
+        Calculate score trend based on recent history.
+        Returns: 'up', 'down', or 'stable'
+        """
+        history = self.history.order_by('-changed_at')[:2]
+        if len(history) < 2:
+            return 'stable'
+
+        current = history[0].health_score or 0
+        previous = history[1].health_score or 0
+
+        if current > previous:
+            return 'up'
+        elif current < previous:
+            return 'down'
+        return 'stable'
+
+    def save(self, *args, **kwargs):
+        """Override save to create history entry on changes."""
+        # Check if this is an update (not a new record)
+        is_update = self.pk is not None
+
+        if is_update:
+            # Get the old values before saving
+            try:
+                old_instance = ClientProfile.objects.get(pk=self.pk)
+                # Check if any score changed
+                if (old_instance.health_score != self.health_score or
+                    old_instance.collaboration_frequency_score != self.collaboration_frequency_score or
+                    old_instance.feedback_score != self.feedback_score or
+                    old_instance.payment_latency_score != self.payment_latency_score or
+                    old_instance.notes != self.notes):
+
+                    # Save first to get updated values
+                    super().save(*args, **kwargs)
+
+                    # Create history entry
+                    ClientProfileHistory.objects.create(
+                        client_profile=self,
+                        health_score=self.health_score,
+                        collaboration_frequency_score=self.collaboration_frequency_score,
+                        feedback_score=self.feedback_score,
+                        payment_latency_score=self.payment_latency_score,
+                        notes=self.notes,
+                        changed_by=self.updated_by
+                    )
+                    return
+            except ClientProfile.DoesNotExist:
+                pass
+
+        # Normal save
+        super().save(*args, **kwargs)
+
+
+class ClientProfileHistory(models.Model):
+    """
+    History of changes to client profiles.
+    Tracks all modifications to see improvements or degradations in client relationships.
+    """
+
+    client_profile = models.ForeignKey(
+        ClientProfile,
+        on_delete=models.CASCADE,
+        related_name='history',
+        help_text="The client profile this history entry belongs to"
+    )
+
+    # Score snapshots at this point in time
+    health_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Health score at this point in time"
+    )
+
+    collaboration_frequency_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Collaboration frequency score at this point in time"
+    )
+
+    feedback_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Feedback score at this point in time"
+    )
+
+    payment_latency_score = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Payment latency score at this point in time"
+    )
+
+    notes = models.TextField(
+        blank=True,
+        help_text="Notes at this point in time"
+    )
+
+    # Who made this change
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='client_profile_changes',
+        help_text="User who made this change"
+    )
+
+    # Optional: reason for change
+    change_reason = models.TextField(
+        blank=True,
+        help_text="Optional reason for this change"
+    )
+
+    changed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+        indexes = [
+            models.Index(fields=['client_profile', '-changed_at']),
+            models.Index(fields=['changed_by', '-changed_at']),
+        ]
+        verbose_name = "Client Profile History"
+        verbose_name_plural = "Client Profile Histories"
+
+    def __str__(self):
+        score_text = f"{self.health_score}/10" if self.health_score else "No score"
+        return f"{self.client_profile.entity.display_name} - {score_text} at {self.changed_at}"
+
+    def get_score_change(self):
+        """
+        Calculate the score change from the previous history entry.
+        Returns: positive/negative integer or None
+        """
+        previous = ClientProfileHistory.objects.filter(
+            client_profile=self.client_profile,
+            changed_at__lt=self.changed_at
+        ).order_by('-changed_at').first()
+
+        if not previous or not previous.health_score or not self.health_score:
+            return None
+
+        return self.health_score - previous.health_score

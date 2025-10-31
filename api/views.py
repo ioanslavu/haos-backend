@@ -309,7 +309,7 @@ class DepartmentRequestListView(generics.ListAPIView):
         # Managers see requests for their department
         elif profile.is_manager and profile.department:
             queryset = DepartmentRequest.objects.filter(
-                requested_department=profile.department
+                requested_department=profile.department_code
             )
         # Regular users see only their own requests
         else:
@@ -347,7 +347,7 @@ class DepartmentRequestDetailView(APIView):
             if not (
                 dept_request.user == request.user or
                 profile.is_admin or
-                (profile.is_manager and profile.department == dept_request.requested_department)
+                (profile.is_manager and profile.department_code == dept_request.requested_department)
             ):
                 return Response(
                     {'error': 'Permission denied'},
@@ -377,7 +377,7 @@ class DepartmentRequestDetailView(APIView):
             dept_request = DepartmentRequest.objects.select_related('user__profile').get(id=request_id)
 
             # Managers can only review requests for their department
-            if profile.is_manager and profile.department != dept_request.requested_department:
+            if profile.is_manager and profile.department_code != dept_request.requested_department:
                 return Response(
                     {'error': 'You can only review requests for your department'},
                     status=status.HTTP_403_FORBIDDEN
@@ -403,12 +403,14 @@ class DepartmentRequestDetailView(APIView):
                 # If approved, update user's role and department
                 if dept_request.status == 'approved':
                     user_profile = dept_request.user.profile
-                    user_profile.department = dept_request.requested_department
+                    # Get the Department object
+                    department = Department.objects.get(code=dept_request.requested_department)
+                    user_profile.department = department
                     # Assign employee role by default when approving
                     if dept_request.requested_department == 'digital':
-                        user_profile.role = 'digital_employee'
+                        user_profile.role = Role.objects.get(code='digital_employee')
                     elif dept_request.requested_department == 'sales':
-                        user_profile.role = 'sales_employee'
+                        user_profile.role = Role.objects.get(code='sales_employee')
                     user_profile.save()
 
                 result_serializer = DepartmentRequestSerializer(dept_request)
@@ -469,7 +471,7 @@ class PendingRequestsCountView(APIView):
             # Managers see pending requests for their department
             count = DepartmentRequest.objects.filter(
                 status='pending',
-                requested_department=profile.department
+                requested_department=profile.department_code
             ).count()
         else:
             count = 0

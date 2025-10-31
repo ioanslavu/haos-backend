@@ -20,6 +20,7 @@ class Notification(models.Model):
         ('contract_signed', 'Contract Signed'),
         ('contract_created', 'Contract Created'),
         ('comment', 'Comment'),
+        ('entity_request', 'Entity Change Request'),
         ('system', 'System'),
     ]
 

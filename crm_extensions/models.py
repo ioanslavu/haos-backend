@@ -61,6 +61,14 @@ class Task(models.Model):
         ('statement_review', 'Statement Review'),
     ]
 
+    TAG_CHOICES = [
+        ('urgent', 'Urgent'),
+        ('client_requested', 'Client Requested'),
+        ('internal', 'Internal'),
+        ('recurring', 'Recurring'),
+        ('blocked_external', 'Blocked by External'),
+    ]
+
     # Core fields
     title = models.CharField(
         max_length=200,
@@ -109,13 +117,21 @@ class Task(models.Model):
     )
 
     # Assignment and ownership
+    # DEPRECATED: Use assigned_to_users instead (kept for migration)
     assigned_to = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='assigned_tasks_old',
+        help_text="DEPRECATED: Use assigned_to_users instead"
+    )
+
+    assigned_to_users = models.ManyToManyField(
+        User,
+        blank=True,
         related_name='assigned_tasks',
-        help_text="User assigned to this task"
+        help_text="Users assigned to this task"
     )
 
     created_by = models.ForeignKey(
@@ -151,6 +167,15 @@ class Task(models.Model):
         help_text="Task priority level"
     )
 
+    tag = models.CharField(
+        max_length=50,
+        choices=TAG_CHOICES,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Task tag for categorization"
+    )
+
     # Dates and deadlines
     due_date = models.DateTimeField(
         null=True,
@@ -163,6 +188,11 @@ class Task(models.Model):
         null=True,
         blank=True,
         help_text="When to send a reminder for this task"
+    )
+
+    follow_up_reminder_sent = models.BooleanField(
+        default=False,
+        help_text="Whether the follow-up reminder has been sent"
     )
 
     started_at = models.DateTimeField(
@@ -237,6 +267,8 @@ class Task(models.Model):
             models.Index(fields=['entity', 'status']),
             models.Index(fields=['due_date', 'status']),
             models.Index(fields=['task_type', 'status']),
+            models.Index(fields=['tag', 'status']),
+            models.Index(fields=['reminder_date', 'follow_up_reminder_sent']),
         ]
         verbose_name = 'Task'
         verbose_name_plural = 'Tasks'
@@ -244,8 +276,19 @@ class Task(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
 
+    def clean(self):
+        """Validate task data"""
+        from django.core.exceptions import ValidationError
+
+        # Require department for all tasks
+        if not self.department:
+            raise ValidationError("Department is required for all tasks")
+
     def save(self, *args, **kwargs):
         """Auto-update timestamps based on status changes"""
+        # Validate before saving
+        self.clean()
+
         if self.status == 'in_progress' and not self.started_at:
             self.started_at = timezone.now()
         elif self.status == 'done' and not self.completed_at:
@@ -604,3 +647,106 @@ class CampaignMetrics(models.Model):
 
     def __str__(self):
         return f"{self.campaign.campaign_name} - Metrics for {self.recorded_date}"
+
+
+class EntityChangeRequest(models.Model):
+    """
+    Model for non-admin users to request entity edits/deletions.
+    Admins review and approve/reject these requests.
+    """
+
+    REQUEST_TYPES = [
+        ('edit', 'Edit Request'),
+        ('delete', 'Delete Request'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    entity = models.ForeignKey(
+        'identity.Entity',
+        on_delete=models.CASCADE,
+        related_name='change_requests',
+        help_text="Entity this request is for"
+    )
+
+    request_type = models.CharField(
+        max_length=20,
+        choices=REQUEST_TYPES,
+        help_text="Type of request (edit or delete)",
+        db_index=True
+    )
+
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='entity_change_requests',
+        help_text="User who requested the change"
+    )
+
+    message = models.TextField(
+        help_text="Explanation of what needs to be changed/deleted"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        help_text="Current status of the request"
+    )
+
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_entity_requests',
+        help_text="Admin who reviewed this request"
+    )
+
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the request was reviewed"
+    )
+
+    admin_notes = models.TextField(
+        blank=True,
+        help_text="Notes from admin when approving/rejecting"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['requested_by', '-created_at']),
+            models.Index(fields=['entity', 'status']),
+        ]
+        verbose_name = 'Entity Change Request'
+        verbose_name_plural = 'Entity Change Requests'
+
+    def __str__(self):
+        return f"{self.request_type} request for {self.entity.display_name} by {self.requested_by.email}"
+
+    def approve(self, admin_user, notes=''):
+        """Approve the request"""
+        self.status = 'approved'
+        self.reviewed_by = admin_user
+        self.reviewed_at = timezone.now()
+        self.admin_notes = notes
+        self.save()
+
+    def reject(self, admin_user, notes=''):
+        """Reject the request"""
+        self.status = 'rejected'
+        self.reviewed_by = admin_user
+        self.reviewed_at = timezone.now()
+        self.admin_notes = notes
+        self.save()

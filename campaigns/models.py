@@ -188,6 +188,39 @@ class Campaign(models.Model):
         help_text="Currency for all monetary values"
     )
 
+    # Financial tracking (for Digital department)
+    profit = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Auto-calculated profit: value - budget_spent"
+    )
+
+    internal_cost_estimate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text="Estimated internal costs (labor, overhead, etc.)"
+    )
+
+    INVOICE_STATUS_CHOICES = [
+        ('issued', 'Issued (Emisă)'),
+        ('collected', 'Collected (Încasată)'),
+        ('delayed', 'Delayed (Întârziată)'),
+    ]
+
+    invoice_status = models.CharField(
+        max_length=20,
+        choices=INVOICE_STATUS_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Invoice status for this campaign"
+    )
+
     # KPI tracking
     kpi_targets = models.JSONField(
         default=dict,
@@ -206,14 +239,6 @@ class Campaign(models.Model):
         default=dict,
         blank=True,
         help_text="Department-specific data and metadata"
-    )
-
-    # Client health/relationship score
-    client_health_score = models.IntegerField(
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
-        help_text="Client relationship health score (1-10)"
     )
 
     # Metadata
@@ -243,6 +268,10 @@ class Campaign(models.Model):
             models.Index(fields=['song', 'status']),
             models.Index(fields=['department', 'status']),  # For RBAC filtering
             models.Index(fields=['department', 'created_at']),  # For department-based queries
+            # Financial query optimization indexes
+            models.Index(fields=['start_date']),  # For date range filtering
+            models.Index(fields=['start_date', 'service_type']),  # For filtered financial queries
+            models.Index(fields=['invoice_status', 'start_date']),  # For pending collections queries
         ]
         verbose_name = 'Campaign'
         verbose_name_plural = 'Campaigns'
