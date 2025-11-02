@@ -68,6 +68,7 @@ class CampaignListSerializer(serializers.ModelSerializer):
             'end_date',
             'budget_allocated',
             'budget_spent',
+            'internal_cost_estimate',
             'kpi_completion',
             'confirmed_at',
             'created_at',
@@ -183,6 +184,7 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
             'end_date',
             'budget_allocated',
             'budget_spent',
+            'internal_cost_estimate',
             'kpi_targets',
             'kpi_actuals',
             'department_data',
@@ -265,6 +267,7 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
             'end_date',
             'budget_allocated',
             'budget_spent',
+            'internal_cost_estimate',
             'kpi_targets',
             'kpi_actuals',
             'department_data',
@@ -283,6 +286,7 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
             'revenue_generated': {'required': False},
             'partner_share_percentage': {'required': False},
             'invoice_status': {'required': False},
+            'internal_cost_estimate': {'required': False, 'allow_null': True},
         }
 
     def validate_value(self, value):
