@@ -57,11 +57,15 @@ class ContractsRBAC:
         if getattr(self.user, 'is_superuser', False):
             return True
         prof = getattr(self.user, 'profile', None)
-        return bool(prof and prof.role == 'administrator')
+        return bool(prof and prof.role and prof.role.code == 'administrator')
 
     def _user_role_dept(self):
         prof = getattr(self.user, 'profile', None)
-        return (getattr(prof, 'role', None), getattr(prof, 'department', None))
+        if not prof:
+            return (None, None)
+        role_code = prof.role.code if prof.role else None
+        dept_code = prof.department.code if prof.department else None
+        return (role_code, dept_code)
 
     def _policy(self, contract_type: str):
         role, dept = self._user_role_dept()
@@ -79,7 +83,7 @@ class ContractsRBAC:
         if not role or not dept:
             return False
         # Must match department of object (reject if no department or different department)
-        if obj.department != dept:
+        if not obj.department or obj.department.code != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_view)
@@ -90,7 +94,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department != dept:
+        if not obj.department or obj.department.code != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_publish)
@@ -101,7 +105,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department != dept:
+        if not obj.department or obj.department.code != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_send)
@@ -112,7 +116,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department != dept:
+        if not obj.department or obj.department.code != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_update)
@@ -123,7 +127,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department != dept:
+        if not obj.department or obj.department.code != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_delete)
@@ -134,7 +138,7 @@ class ContractsRBAC:
         role, dept = self._user_role_dept()
         if not role or not dept:
             return False
-        if obj.department != dept:
+        if not obj.department or obj.department.code != dept:
             return False
         pol = self._policy(obj.contract_type or '')
         return bool(pol and pol.can_regenerate)

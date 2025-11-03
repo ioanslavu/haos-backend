@@ -232,7 +232,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
     test_users = [
         {
             'email': 'test.guest@hahahaproduction.com',
-            'username': 'test.guest@hahahaproduction.com',
+            'username': 'test_guest',
             'first_name': 'Test Guest',
             'last_name': 'User',
             'password': 'test123',
@@ -241,7 +241,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
         },
         {
             'email': 'test.digital.manager@hahahaproduction.com',
-            'username': 'test.digital.manager@hahahaproduction.com',
+            'username': 'test_digital_mgr',
             'first_name': 'Test Digital',
             'last_name': 'Manager',
             'password': 'test123',
@@ -250,7 +250,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
         },
         {
             'email': 'test.digital.employee@hahahaproduction.com',
-            'username': 'test.digital.employee@hahahaproduction.com',
+            'username': 'test_digital_emp',
             'first_name': 'Test Digital',
             'last_name': 'Employee',
             'password': 'test123',
@@ -259,7 +259,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
         },
         {
             'email': 'test.sales.manager@hahahaproduction.com',
-            'username': 'test.sales.manager@hahahaproduction.com',
+            'username': 'test_sales_mgr',
             'first_name': 'Test Sales',
             'last_name': 'Manager',
             'password': 'test123',
@@ -268,7 +268,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
         },
         {
             'email': 'test.sales.employee@hahahaproduction.com',
-            'username': 'test.sales.employee@hahahaproduction.com',
+            'username': 'test_sales_emp',
             'first_name': 'Test Sales',
             'last_name': 'Employee',
             'password': 'test123',
@@ -277,7 +277,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
         },
         {
             'email': 'test.publishing.manager@hahahaproduction.com',
-            'username': 'test.publishing.manager@hahahaproduction.com',
+            'username': 'test_pub_mgr',
             'first_name': 'Test Publishing',
             'last_name': 'Manager',
             'password': 'test123',
@@ -286,7 +286,7 @@ def seed_departments_roles_and_migrate_data(apps, schema_editor):
         },
         {
             'email': 'test.publishing.employee@hahahaproduction.com',
-            'username': 'test.publishing.employee@hahahaproduction.com',
+            'username': 'test_pub_emp',
             'first_name': 'Test Publishing',
             'last_name': 'Employee',
             'password': 'test123',

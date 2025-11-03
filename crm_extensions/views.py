@@ -6,6 +6,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
+from api.viewsets import OwnedResourceViewSet, DepartmentScopedViewSet
+from api.scoping import QuerysetScoping
 
 from .models import Task, Activity, CampaignMetrics, EntityChangeRequest
 from .serializers import (
@@ -16,16 +18,25 @@ from .serializers import (
     CampaignMetricsSerializer,
     EntityChangeRequestSerializer,
 )
-from api.permissions import HasDepartmentAccess
+from .permissions import TaskPermission, ActivityPermission, EntityChangeRequestPermission
 
 
-class TaskViewSet(viewsets.ModelViewSet):
+class TaskViewSet(OwnedResourceViewSet):
     """
-    ViewSet for managing tasks.
-    Supports filtering by status, priority, assignment, and associations.
+    ViewSet for managing tasks with RBAC.
+
+    Inherits from OwnedResourceViewSet which provides automatic RBAC filtering:
+    - Admins: See all tasks
+    - Department Managers: See all tasks in their department
+    - Department Employees: See tasks they created OR are assigned to
+    - Guests/No Department: See nothing
+
+    Note: Tasks use direct M2M for assignment (assigned_to_users), not through model.
+    The BaseViewSet handles this automatically with assigned_through_field=None.
     """
     queryset = Task.objects.all()
-    permission_classes = [IsAuthenticated, HasDepartmentAccess]
+    permission_classes = [IsAuthenticated, TaskPermission]
+    serializer_class = TaskSerializer  # Default serializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description', 'notes']
     ordering_fields = ['priority', 'due_date', 'created_at', 'status']
@@ -45,30 +56,23 @@ class TaskViewSet(viewsets.ModelViewSet):
         'created_at': ['gte', 'lte'],
     }
 
-    def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return TaskCreateUpdateSerializer
-        return TaskSerializer
+    # BaseViewSet configuration (replaces hardcoded role checks)
+    queryset_scoping = QuerysetScoping.DEPARTMENT_WITH_OWNERSHIP
+    ownership_field = 'created_by'
+    assigned_field = 'assigned_to_users'
+    assigned_through_field = None  # Direct M2M (not through model)!
+    select_related_fields = ['campaign', 'entity', 'contract', 'assigned_to', 'created_by', 'department', 'parent_task']
+    prefetch_related_fields = ['blocks_tasks', 'subtasks', 'assigned_to_users']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
+        """
+        Extend parent queryset with additional query param filtering.
 
-        # Role-based filtering (similar to campaigns)
-        if hasattr(user, 'profile'):
-            if user.profile.is_admin:
-                # Admins see everything
-                pass
-            elif user.profile.is_manager:
-                # Managers see all tasks in their department
-                if user.profile.department:
-                    queryset = queryset.filter(department=user.profile.department)
-            elif user.profile.is_employee:
-                # Employees see only tasks assigned to them
-                queryset = queryset.filter(assigned_to_users=user)
-            else:
-                # Guests see nothing
-                queryset = queryset.none()
+        Parent handles RBAC filtering (admin/manager/employee logic).
+        This adds custom query params for task-specific filtering.
+        """
+        # Get RBAC-filtered queryset from parent
+        queryset = super().get_queryset()
 
         # Additional query params
         is_overdue = self.request.query_params.get('is_overdue')
@@ -86,7 +90,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         my_tasks = self.request.query_params.get('my_tasks')
         if my_tasks == 'true':
-            queryset = queryset.filter(assigned_to_users=user)
+            queryset = queryset.filter(assigned_to_users=self.request.user)
 
         # Support filtering by multiple assignees
         assigned_to_in = self.request.query_params.get('assigned_to__in')
@@ -94,13 +98,12 @@ class TaskViewSet(viewsets.ModelViewSet):
             user_ids = [int(uid) for uid in assigned_to_in.split(',')]
             queryset = queryset.filter(assigned_to_users__id__in=user_ids).distinct()
 
-        # Optimize query with select_related and prefetch_related
-        queryset = queryset.select_related(
-            'campaign', 'entity', 'contract',
-            'assigned_to', 'created_by', 'department', 'parent_task'
-        ).prefetch_related('blocks_tasks', 'subtasks', 'assigned_to_users')
-
         return queryset
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return TaskCreateUpdateSerializer
+        return TaskSerializer
 
     def perform_create(self, serializer):
         # Auto-assign creator to task and set department to digital
@@ -184,12 +187,22 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ActivityViewSet(viewsets.ModelViewSet):
+class ActivityViewSet(DepartmentScopedViewSet):
     """
-    ViewSet for managing activities and communication logs.
+    ViewSet for managing activities and communication logs with RBAC.
+
+    Inherits from DepartmentScopedViewSet which provides automatic RBAC filtering:
+    - Admins: See all activities
+    - Department users: See activities in their department
+
+    ActivityPermission provides object-level checks:
+    - All department users can view/create/edit activities in their department
+    - No ownership restrictions - activities are shared within the department
+
+    No hardcoded role checks needed!
     """
     queryset = Activity.objects.all()
-    permission_classes = [IsAuthenticated, HasDepartmentAccess]
+    permission_classes = [IsAuthenticated, ActivityPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['subject', 'content', 'location']
     ordering_fields = ['activity_date', 'created_at', 'sentiment']
@@ -209,21 +222,24 @@ class ActivityViewSet(viewsets.ModelViewSet):
         'activity_date': ['gte', 'lte'],
     }
 
+    # BaseViewSet configuration
+    select_related_fields = ['entity', 'contact_person', 'campaign', 'contract', 'created_by', 'department', 'follow_up_task']
+    prefetch_related_fields = ['participants']
+
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return ActivityCreateUpdateSerializer
         return ActivitySerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
+        """
+        Extend parent queryset with query param filtering.
 
-        # Filter by user's department if not admin
-        if hasattr(user, 'userprofile') and not user.userprofile.is_admin:
-            if user.userprofile.department:
-                queryset = queryset.filter(
-                    Q(department=user.userprofile.department) | Q(department__isnull=True)
-                )
+        Parent handles RBAC filtering (admin/department logic).
+        This adds custom query params for activity-specific filtering.
+        """
+        # Get RBAC-filtered queryset from parent
+        queryset = super().get_queryset()
 
         # Filter for activities needing follow-up
         needs_follow_up = self.request.query_params.get('needs_follow_up')
@@ -238,14 +254,8 @@ class ActivityViewSet(viewsets.ModelViewSet):
         my_activities = self.request.query_params.get('my_activities')
         if my_activities == 'true':
             queryset = queryset.filter(
-                Q(created_by=user) | Q(participants=user)
+                Q(created_by=self.request.user) | Q(participants=self.request.user)
             ).distinct()
-
-        # Optimize query
-        queryset = queryset.select_related(
-            'entity', 'contact_person', 'campaign',
-            'contract', 'created_by', 'department', 'follow_up_task'
-        ).prefetch_related('participants')
 
         return queryset
 
@@ -307,7 +317,14 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
 class CampaignMetricsViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for campaign metrics and KPI tracking.
+    ViewSet for campaign metrics and KPI tracking with RBAC.
+
+    Metrics inherit access from their related Campaign:
+    - Admins: See all metrics
+    - Department Managers: See metrics for campaigns in their department
+    - Department Employees: See metrics for campaigns they created or are assigned to
+
+    No hardcoded role checks - uses Campaign RBAC to determine accessible metrics!
     """
     queryset = CampaignMetrics.objects.all()
     serializer_class = CampaignMetricsSerializer
@@ -323,9 +340,43 @@ class CampaignMetricsViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        """
+        Filter metrics based on Campaign RBAC.
 
-        # Filter by campaign if provided
+        Instead of duplicating Campaign's RBAC logic, we get the accessible campaigns
+        and filter metrics to only those campaigns.
+        """
+        from campaigns.models import Campaign
+
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        if not hasattr(user, 'profile'):
+            return queryset.none()
+
+        profile = user.profile
+
+        # Admins see all metrics
+        if profile.is_admin:
+            pass  # No filtering needed
+        elif profile.department:
+            # Filter by campaigns accessible to the user
+            # This follows the same logic as CampaignViewSet
+            if profile.is_manager:
+                # Managers see metrics for all campaigns in their department
+                queryset = queryset.filter(campaign__department=profile.department)
+            else:
+                # Employees see metrics for campaigns they created or are assigned to
+                queryset = queryset.filter(
+                    campaign__department=profile.department
+                ).filter(
+                    Q(campaign__created_by=user) | Q(campaign__handlers__user=user)
+                ).distinct()
+        else:
+            # No department = no access
+            return queryset.none()
+
+        # Query param filtering
         campaign_id = self.request.query_params.get('campaign')
         if campaign_id:
             queryset = queryset.filter(campaign_id=campaign_id)
@@ -413,12 +464,17 @@ class CampaignMetricsViewSet(viewsets.ModelViewSet):
 
 class EntityChangeRequestViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for entity change requests.
-    - Non-admins can: create requests, view their own requests
-    - Admins can: view all requests, approve/reject
+    ViewSet for entity change requests with RBAC.
+
+    Simple ownership-based access:
+    - Admins: View all requests, can approve/reject
+    - Regular users: Create requests, view their own requests
+
+    EntityChangeRequestPermission provides object-level checks.
+    No hardcoded role checks!
     """
     serializer_class = EntityChangeRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, EntityChangeRequestPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['message', 'admin_notes', 'entity__display_name']
     ordering_fields = ['created_at', 'status']
@@ -432,10 +488,19 @@ class EntityChangeRequestViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
+        """
+        Filter requests based on ownership.
+
+        Admins see all requests, regular users see only their own.
+        No hardcoded role checks!
+        """
         user = self.request.user
 
+        if not hasattr(user, 'profile'):
+            return EntityChangeRequest.objects.none()
+
         # Admins see all requests
-        if hasattr(user, 'profile') and user.profile.is_admin:
+        if user.profile.is_admin:
             return EntityChangeRequest.objects.all()
 
         # Non-admins see only their own requests
@@ -454,18 +519,20 @@ class EntityChangeRequestViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         """
         Admin approves the request.
-        Requires admin permission.
+
+        Object-level permission check via get_object() ensures only admins can approve.
+        No hardcoded role checks!
         """
+        change_request = self.get_object()
         user = request.user
 
-        # Check if user is admin
-        if not (hasattr(user, 'profile') and user.profile.is_admin):
+        # Additional business logic check: only admins can approve
+        if not user.profile.is_admin:
             return Response(
                 {'error': 'Only admins can approve requests'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        change_request = self.get_object()
         admin_notes = request.data.get('admin_notes', '')
 
         # Approve the request
@@ -480,18 +547,20 @@ class EntityChangeRequestViewSet(viewsets.ModelViewSet):
     def reject(self, request, pk=None):
         """
         Admin rejects the request.
-        Requires admin permission.
+
+        Object-level permission check via get_object() ensures only admins can reject.
+        No hardcoded role checks!
         """
+        change_request = self.get_object()
         user = request.user
 
-        # Check if user is admin
-        if not (hasattr(user, 'profile') and user.profile.is_admin):
+        # Additional business logic check: only admins can reject
+        if not user.profile.is_admin:
             return Response(
                 {'error': 'Only admins can reject requests'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        change_request = self.get_object()
         admin_notes = request.data.get('admin_notes', '')
 
         # Reject the request

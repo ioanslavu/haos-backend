@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Sum, Q, F, DecimalField
 from django.db.models.functions import Coalesce
 from decimal import Decimal
+from api.viewsets import OwnedResourceViewSet
+from api.scoping import QuerysetScoping
 from .models import Campaign
 from .serializers import (
     CampaignListSerializer,
@@ -15,68 +17,35 @@ from .filters import CampaignFilter
 from .permissions import CampaignPermission
 
 
-class CampaignViewSet(viewsets.ModelViewSet):
+class CampaignViewSet(OwnedResourceViewSet):
     """
-    ViewSet for Campaign CRUD operations and analytics with RBAC
+    ViewSet for Campaign CRUD operations and analytics with RBAC.
+
+    Inherits from OwnedResourceViewSet which provides automatic RBAC filtering:
+    - Admins: See all campaigns
+    - Department Managers: See all campaigns in their department
+    - Department Employees: See campaigns they created OR are assigned to (handlers)
+    - Guests/No Department: See nothing
+
+    All role/permission logic is handled by the parent class - no hardcoded checks!
     """
+    queryset = Campaign.objects.all()
     permission_classes = [IsAuthenticated, CampaignPermission]
+    serializer_class = CampaignListSerializer  # Default serializer
     filterset_class = CampaignFilter
     search_fields = ['campaign_name', 'notes', 'client__display_name', 'artist__display_name', 'brand__display_name', 'song__title']
     ordering_fields = ['created_at', 'updated_at', 'campaign_name', 'value', 'status', 'confirmed_at']
     ordering = ['-created_at']
 
-    def get_queryset(self):
-        """
-        Filter queryset based on user role and department (RBAC).
+    # BaseViewSet configuration (replaces get_queryset hardcoded logic)
+    queryset_scoping = QuerysetScoping.DEPARTMENT_WITH_OWNERSHIP
+    ownership_field = 'created_by'
+    assigned_field = 'handlers'
+    assigned_through_field = 'user'  # CampaignHandler.user
+    select_related_fields = ['client', 'artist', 'brand', 'song', 'created_by', 'department']
+    prefetch_related_fields = ['handlers__user']
 
-        - Admins: See all campaigns
-        - Department Managers: See campaigns from their department
-        - Department Employees: See campaigns they created OR are assigned to (handlers)
-        - Guests/No Department: See nothing
-        """
-        user = self.request.user
-
-        # Base queryset with optimizations
-        queryset = Campaign.objects.select_related(
-            'client',
-            'artist',
-            'brand',
-            'song',
-            'created_by'
-        )
-
-        # Prefetch handlers for detail views and employee filtering
-        if self.action in ['retrieve', 'update', 'partial_update'] or \
-           (hasattr(user, 'profile') and user.profile.is_employee):
-            queryset = queryset.prefetch_related('handlers__user')
-
-        # Check if user has profile
-        if not hasattr(user, 'profile'):
-            return queryset.none()
-
-        profile = user.profile
-
-        # Admins see everything
-        if profile.is_admin:
-            return queryset.all()
-
-        # Users without a department see nothing
-        if not profile.department:
-            return queryset.none()
-
-        # Managers see all campaigns in their department
-        if profile.is_manager:
-            return queryset.filter(department=profile.department)
-
-        # Employees see campaigns they created or are assigned to
-        if profile.is_employee:
-            return queryset.filter(
-                Q(department=profile.department) &
-                (Q(created_by=user) | Q(handlers__user=user))
-            ).distinct()
-
-        # Default: no access
-        return queryset.none()
+    # NO get_queryset() override needed - parent handles all RBAC filtering!
 
     def get_serializer_class(self):
         """

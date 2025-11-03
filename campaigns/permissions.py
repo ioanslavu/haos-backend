@@ -1,92 +1,33 @@
 """
 Custom permissions for campaign RBAC.
+
+Uses the new DRF-compliant permission classes from api.permissions.
 """
 from rest_framework import permissions
-from api.models import Department
+from api.permissions import OwnershipPermission
 
 
-class CampaignPermission(permissions.BasePermission):
+class CampaignPermission(OwnershipPermission):
     """
     Campaign-level permissions based on user role and department.
 
-    Rules:
-    - Admins: Can view, edit, delete all campaigns
-    - Department Managers: Can view, edit, delete campaigns from their department
-    - Department Employees: Can view, edit, delete campaigns they created OR are assigned to (handlers)
-    - Guests/No Department: No access
+    Inherits from OwnershipPermission which provides:
+    - Admins: Full access to all campaigns
+    - Department check: Campaign must be in same department
+    - Managers: Full access to all campaigns in their department
+    - Employees: Only campaigns they created or are assigned to (handlers)
+
+    No hardcoded role checks - all logic handled by parent class.
+    This enables adding new roles (e.g., "Senior Manager") without code changes.
+
+    Object-level permission is enforced via:
+    1. get_queryset() filtering (data visibility)
+    2. has_object_permission() check (authorization)
+
+    ⚠️  IMPORTANT: Always use self.get_object() in detail actions to ensure
+    has_object_permission() is called. Never manually fetch with Model.objects.get()
     """
-
-    def has_permission(self, request, view):
-        """
-        Check if user has general permission to access campaigns.
-        View-level filtering is handled in the ViewSet's get_queryset().
-        """
-        if not request.user or not request.user.is_authenticated:
-            return False
-
-        # User must have a profile
-        if not hasattr(request.user, 'profile'):
-            return False
-
-        profile = request.user.profile
-
-        # Admins always have access
-        if profile.is_admin:
-            return True
-
-        # Users with a department have access (filtering handled in queryset)
-        if profile.department:
-            return True
-
-        # Guests and users without departments have no access
-        return False
-
-    def has_object_permission(self, request, view, obj):
-        """
-        Check if user has permission to perform action on specific campaign object.
-
-        Args:
-            obj: Campaign instance
-        """
-        if not request.user or not request.user.is_authenticated:
-            return False
-
-        if not hasattr(request.user, 'profile'):
-            return False
-
-        profile = request.user.profile
-
-        # Admins can do anything
-        if profile.is_admin:
-            return True
-
-        # Campaign must belong to user's department
-        if obj.department != profile.department:
-            return False
-
-        # Managers can do anything in their department
-        if profile.is_manager:
-            return True
-
-        # Employees can only modify campaigns they created or are assigned to
-        if profile.is_employee:
-            # Check if user created the campaign
-            if obj.created_by == request.user:
-                return True
-
-            # Check if user is assigned as a handler
-            if obj.handlers.filter(user=request.user).exists():
-                return True
-
-            # Employee can view campaigns in their department (handled by queryset)
-            # but cannot edit/delete campaigns they didn't create or aren't assigned to
-            if request.method in permissions.SAFE_METHODS:
-                return False  # This shouldn't be reached due to queryset filtering
-
-            return False
-
-        # Default deny
-        return False
+    pass  # No custom logic needed - parent handles everything!
 
 
 class HasDigitalDepartmentAccess(permissions.BasePermission):

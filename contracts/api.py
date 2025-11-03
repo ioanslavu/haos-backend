@@ -88,14 +88,14 @@ class UserContractsMatrixView(APIView):
     def get(self, request, user_id):
         """Effective policy matrix for a user (based on profile role+department)."""
         try:
-            user = User.objects.select_related('profile').get(id=user_id)
+            user = User.objects.select_related('profile', 'profile__role', 'profile__department').get(id=user_id)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         prof = getattr(user, 'profile', None)
         if not prof or not prof.department or not prof.role:
             return Response({'role': None, 'department': None, 'policies': []})
         try:
-            qs = ContractTypePolicy.objects.filter(role=prof.role, department=prof.department)
+            qs = ContractTypePolicy.objects.filter(role=prof.role.code, department=prof.department.code)
             data = [
                 {
                     'contract_type': p.contract_type,
@@ -110,4 +110,4 @@ class UserContractsMatrixView(APIView):
             ]
         except (ProgrammingError, OperationalError):
             data = []
-        return Response({'role': prof.role, 'department': prof.department, 'policies': data})
+        return Response({'role': prof.role.code, 'department': prof.department.code, 'policies': data})

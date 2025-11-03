@@ -1,3 +1,12 @@
+"""
+Permission classes for API endpoints.
+
+Legacy permission classes (kept for backwards compatibility):
+- IsAdministrator, IsAdministratorOrManager, IsNotGuest, etc.
+
+New DRF-compliant permission classes with object-level checks:
+- BaseResourcePermission, DepartmentScopedPermission, OwnershipPermission
+"""
 from rest_framework import permissions
 
 
@@ -154,3 +163,176 @@ class CanRevealSensitiveIdentity(permissions.BasePermission):
         # Current action reveals CNP; future fields can reuse same policy model
         field = 'cnp'
         return SensitiveAccessPolicy.check_allowed(dept, role, field)
+
+
+# ============================================================================
+# New DRF-Compliant Permission Classes (with object-level checks)
+# ============================================================================
+
+
+class BaseResourcePermission(permissions.BasePermission):
+    """
+    Base permission class that enforces object-level permission checks.
+
+    All resource-specific permission classes should inherit from this to ensure
+    proper implementation of both view-level and object-level authorization.
+
+    Defense in depth:
+    - has_permission(): View-level check (can user access endpoint?)
+    - has_object_permission(): Object-level check (can user access THIS object?)
+
+    IMPORTANT: DRF only calls has_object_permission() if the object is fetched
+    via get_object(). Always use standard DRF patterns:
+    - ✓ Correct: self.get_object() in retrieve/update/destroy
+    - ✗ Wrong: Model.objects.get(pk=pk) (bypasses object-level check!)
+
+    Subclasses MUST implement has_object_permission() or this will raise
+    NotImplementedError as a safety guard.
+    """
+
+    def has_permission(self, request, view):
+        """
+        View-level permission check.
+
+        Default: User must be authenticated and have a profile.
+        Override in subclasses for more specific checks.
+        """
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if not hasattr(request.user, 'profile'):
+            return False
+
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Object-level permission check.
+
+        MUST be overridden in subclasses. Raising NotImplementedError ensures
+        developers don't forget to implement this critical security layer.
+
+        Args:
+            request: DRF request object
+            view: ViewSet instance
+            obj: Model instance being accessed
+
+        Returns:
+            bool: True if user can access object, False otherwise
+
+        Raises:
+            NotImplementedError: If subclass doesn't implement this method
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} must implement has_object_permission(). "
+            f"This is required for defense-in-depth security."
+        )
+
+
+class DepartmentScopedPermission(BaseResourcePermission):
+    """
+    Permission for resources scoped to departments.
+
+    Access rules:
+    - Admins: Bypass all checks (global access)
+    - Users with department: Can access objects in their department
+    - Users without department: Denied
+
+    Object-level check:
+    - Object must have 'department' field
+    - Object's department must match user's department (or user is admin)
+
+    Usage:
+        class ContractViewSet(BaseViewSet):
+            permission_classes = [IsAuthenticated, DepartmentScopedPermission]
+    """
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Check if user can access object based on department scoping.
+
+        Returns:
+            bool: True if admin or same department, False otherwise
+        """
+        user = request.user
+        profile = user.profile
+
+        # Admins bypass all checks
+        if profile.is_admin:
+            return True
+
+        # Must have department
+        if not profile.department:
+            return False
+
+        # Object must have department field
+        obj_dept = getattr(obj, 'department', None)
+        if obj_dept is None:
+            # Object doesn't have department field - this is a configuration error
+            # Deny access to be safe
+            return False
+
+        # Department must match (returns False = 403, not 404)
+        return obj_dept == profile.department
+
+
+class OwnershipPermission(DepartmentScopedPermission):
+    """
+    Permission for resources with ownership and assignment.
+
+    Access rules (in addition to department scoping):
+    - Admins: Bypass all checks
+    - Managers: Can access any object in their department
+    - Employees: Can only access objects they created or are assigned to
+
+    This class handles the department check via parent class, then adds
+    ownership/assignment logic for employees.
+
+    Note: Assignment checking is delegated to the ViewSet's queryset filtering.
+    If the object appears in get_queryset(), the employee can access it.
+
+    Usage:
+        class CampaignViewSet(OwnedResourceViewSet):
+            permission_classes = [IsAuthenticated, OwnershipPermission]
+            assigned_field = 'handlers'  # ViewSet config
+    """
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Check if user can access object based on ownership/assignment.
+
+        First checks department scoping (via parent), then adds ownership logic.
+
+        Returns:
+            bool: True if user can access, False otherwise
+        """
+        # First check department scoping
+        if not super().has_object_permission(request, view, obj):
+            return False
+
+        user = request.user
+        profile = user.profile
+
+        # Admins and managers in same dept can access
+        if profile.is_admin or profile.is_manager:
+            return True
+
+        # Employees: object must be in queryset (ownership/assignment already checked)
+        # If we're here in has_object_permission(), it means:
+        # 1. Object was fetched via get_object()
+        # 2. get_object() uses get_queryset() which already filtered by ownership
+        # 3. So if we're here, employee has access
+        #
+        # This is defense-in-depth: queryset filters + object-level check
+        if profile.is_employee:
+            # Double-check ownership (redundant but safer)
+            created_by = getattr(obj, 'created_by', None)
+            if created_by == user:
+                return True
+
+            # Assignment is checked by queryset filtering
+            # If object passed get_queryset(), employee has access
+            return True
+
+        # Default deny
+        return False

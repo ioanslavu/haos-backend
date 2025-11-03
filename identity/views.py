@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from api.permissions import CanRevealSensitiveIdentity, IsNotGuest
+from api.viewsets import GlobalResourceViewSet, DepartmentScopedViewSet
+from .permissions import EntityPermission
 from django_filters import rest_framework as django_filters
 from django.utils import timezone
 from django.db.models import Q, Count
@@ -52,16 +54,25 @@ class EntityFilter(django_filters.FilterSet):
         )
 
 
-class EntityViewSet(viewsets.ModelViewSet):
+class EntityViewSet(GlobalResourceViewSet):
     """
-    ViewSet for Entity model.
+    ViewSet for Entity model with RBAC.
 
-    Access: All authenticated users except guests can view entities.
-    Data shown is filtered by department (campaigns, contact persons, etc.).
+    Inherits from GlobalResourceViewSet which provides:
+    - Global access for all authenticated users (no department filtering)
+
+    EntityPermission provides object-level checks:
+    - Currently: All authenticated users can access
+    - Future: Will check EntityUsage for department-scoped visibility
+
+    Note: Related data (campaigns, contact persons) shown in custom actions
+    is filtered by department using the respective ViewSet RBAC logic.
+
+    No hardcoded role checks in base CRUD!
     """
 
     queryset = Entity.objects.all()
-    permission_classes = [IsAuthenticated, IsNotGuest]
+    permission_classes = [IsAuthenticated, IsNotGuest, EntityPermission]
     filterset_class = EntityFilter
     filter_backends = [
         django_filters.DjangoFilterBackend,
@@ -71,6 +82,9 @@ class EntityViewSet(viewsets.ModelViewSet):
     search_fields = ['display_name', 'email', 'phone', 'notes']
     ordering_fields = ['display_name', 'created_at', 'updated_at']
     ordering = ['-created_at']
+
+    # BaseViewSet configuration
+    prefetch_related_fields = ['entity_roles']
 
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
@@ -83,14 +97,15 @@ class EntityViewSet(viewsets.ModelViewSet):
         return EntityDetailSerializer
 
     def get_queryset(self):
-        """Optimize queryset with prefetch_related."""
+        """
+        Get queryset with prefetch optimization.
+
+        Parent handles RBAC (currently global access for all authenticated users).
+        This adds action-specific prefetching.
+        """
         queryset = super().get_queryset()
-        if self.action == 'list':
-            queryset = queryset.prefetch_related('entity_roles')
-        else:
-            queryset = queryset.prefetch_related(
-                'entity_roles'
-            )
+        # Parent already applies prefetch_related_fields
+        # No additional optimization needed
         return queryset
 
     @action(detail=True, methods=['get'])
@@ -217,6 +232,11 @@ class EntityViewSet(viewsets.ModelViewSet):
         - Managers: See all campaigns and contracts for their department
         - Employees: See only campaigns and contracts they created or are assigned to
         - Guests: No access
+
+        NOTE: This filtering logic duplicates CampaignViewSet and ContractViewSet RBAC.
+        TODO: Refactor to use CampaignViewSet/ContractViewSet get_queryset() methods
+        or create shared RBAC utilities to avoid duplication.
+        For now, this hardcoded logic is acceptable for related data filtering.
         """
         entity = self.get_object()
         user = request.user
@@ -231,6 +251,7 @@ class EntityViewSet(viewsets.ModelViewSet):
         contracts_queryset = Contract.objects.filter(counterparty_entity=entity)
 
         # Apply department filtering based on role level
+        # NOTE: This logic should match CampaignViewSet/ContractViewSet RBAC
         if profile.is_admin:
             # Admins see everything
             pass
@@ -283,6 +304,11 @@ class EntityViewSet(viewsets.ModelViewSet):
         Optionally filter by contract_type.
         Used for auto-populating contract generation forms.
         Now respects department filtering.
+
+        NOTE: This filtering logic duplicates ContractViewSet RBAC.
+        TODO: Refactor to use ContractViewSet get_queryset() method
+        or create shared RBAC utilities to avoid duplication.
+        For now, this hardcoded logic is acceptable for related data filtering.
         """
         from contracts.models import Contract, ContractShare
         from contracts.serializers import ContractShareSerializer
@@ -299,6 +325,7 @@ class EntityViewSet(viewsets.ModelViewSet):
         )
 
         # Apply department filtering
+        # NOTE: This logic should match ContractViewSet RBAC
         if profile.is_admin:
             # Admins see all contracts
             pass
@@ -614,13 +641,16 @@ class ClientProfileFilter(django_filters.FilterSet):
         fields = ['entity', 'department']
 
 
-class ClientProfileViewSet(viewsets.ModelViewSet):
+class ClientProfileViewSet(DepartmentScopedViewSet):
     """
-    ViewSet for ClientProfile model.
+    ViewSet for ClientProfile model with RBAC.
 
-    RBAC:
-    - Users can only see and edit profiles for their department
-    - Admins can see and edit profiles for all departments
+    Inherits from DepartmentScopedViewSet which provides automatic RBAC filtering:
+    - Admins: See all client profiles across all departments
+    - Department users: See only profiles for their department
+
+    No ownership restrictions - profiles are shared within the department.
+    No hardcoded role checks!
     """
 
     queryset = ClientProfile.objects.all()
@@ -633,38 +663,15 @@ class ClientProfileViewSet(viewsets.ModelViewSet):
     ordering_fields = ['health_score', 'updated_at', 'created_at']
     ordering = ['-updated_at']
 
+    # BaseViewSet configuration
+    select_related_fields = ['entity', 'department', 'updated_by']
+    prefetch_related_fields = ['history']
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action in ['create', 'update', 'partial_update']:
             return ClientProfileCreateUpdateSerializer
         return ClientProfileSerializer
-
-    def get_queryset(self):
-        """
-        Filter queryset based on user's department.
-        - Admins see all profiles
-        - Users see only their department's profiles
-        """
-        queryset = super().get_queryset().select_related(
-            'entity', 'department', 'updated_by'
-        ).prefetch_related('history')
-
-        user = self.request.user
-        profile = getattr(user, 'profile', None)
-
-        if not profile:
-            return queryset.none()
-
-        # Admins see all profiles
-        if profile.is_admin:
-            return queryset
-
-        # Users with department see only their department's profiles
-        if profile.department:
-            return queryset.filter(department=profile.department)
-
-        # Users without department see nothing
-        return queryset.none()
 
     @action(detail=False, methods=['get'])
     def by_entity(self, request):

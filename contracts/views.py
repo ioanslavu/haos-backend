@@ -24,15 +24,30 @@ from .serializers import (
 )
 from .services.contract_generator import ContractGeneratorService
 from .services.dropbox_sign import DropboxSignService
+from api.viewsets import DepartmentScopedViewSet
+from .permissions import ContractTemplatePermission
 
 
-class ContractTemplateViewSet(viewsets.ModelViewSet):
+class ContractTemplateViewSet(DepartmentScopedViewSet):
     """
-    ViewSet for managing contract templates.
+    ViewSet for managing contract templates with RBAC.
+
+    Inherits from DepartmentScopedViewSet which provides automatic RBAC filtering:
+    - Admins: See all templates
+    - Department users: See templates in their department
+
+    ContractTemplatePermission provides object-level checks:
+    - Read: All department users
+    - Write: Managers only
+
+    No hardcoded role checks needed!
     """
     queryset = ContractTemplate.objects.all()
     serializer_class = ContractTemplateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ContractTemplatePermission]
+
+    # BaseViewSet configuration
+    select_related_fields = ['created_by']
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -252,75 +267,96 @@ class ContractTemplateViewSet(viewsets.ModelViewSet):
 
 
 from .rbac import ContractsRBAC, ContractTypePolicy
-from .permissions import CanMakePublic, CanSendForSignature
+from .permissions import CanMakePublic, CanSendForSignature, ContractPermission
+from api.viewsets import OwnedResourceViewSet
+from api.scoping import QuerysetScoping
 
 
-class ContractViewSet(viewsets.ModelViewSet):
+class ContractViewSet(OwnedResourceViewSet):
     """
-    ViewSet for managing contracts.
+    ViewSet for managing contracts with RBAC.
+
+    Inherits from OwnedResourceViewSet which provides automatic RBAC filtering:
+    - Admins: See all contracts
+    - Department Managers: See all contracts in their department
+    - Department Employees: See contracts they created
+
+    Additionally applies policy-based filtering via ContractTypePolicy for
+    contract type restrictions.
+
+    All role/permission logic is handled by BaseViewSet + ContractPermission.
+    No hardcoded checks!
     """
     queryset = Contract.objects.all()
     serializer_class = ContractSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ContractPermission]
+
+    # BaseViewSet configuration (replaces hardcoded RBAC logic)
+    queryset_scoping = QuerysetScoping.DEPARTMENT_WITH_OWNERSHIP
+    ownership_field = 'created_by'
+    select_related_fields = ['template', 'counterparty_entity', 'created_by', 'department']
+    prefetch_related_fields = ['signatures', 'shares']
 
     def get_queryset(self):
+        """
+        Extend parent queryset with query params and policy filtering.
+
+        Parent handles RBAC filtering (admin/manager/employee logic).
+        This adds:
+        - Query param filtering (status, template, entity)
+        - Policy-based contract type filtering for non-admins
+        """
+        # Get RBAC-filtered queryset from parent
         queryset = super().get_queryset()
 
-        # Filter by status
+        # Query param filtering
         status_param = self.request.query_params.get('status')
         if status_param:
             queryset = queryset.filter(status=status_param)
 
-        # Filter by template
         template_id = self.request.query_params.get('template')
         if template_id:
             queryset = queryset.filter(template_id=template_id)
 
-        # Filter by counterparty entity
         entity_id = self.request.query_params.get('counterparty_entity')
         if entity_id:
             queryset = queryset.filter(counterparty_entity_id=entity_id)
 
-        # RBAC scoping: non-admins only see their department and allowed types
-        user = getattr(self.request, 'user', None)
-        if user and user.is_authenticated:
-            prof = getattr(user, 'profile', None)
-            is_admin = getattr(user, 'is_superuser', False) or (prof and prof.role == 'administrator')
-            if not is_admin and prof and prof.department:
+        # Policy-based filtering for non-admins
+        user = self.request.user
+        if hasattr(user, 'profile'):
+            profile = user.profile
+
+            # Admins bypass policy filtering
+            if not profile.is_admin and profile.department:
                 try:
-                    # Get allowed types for view
+                    # Get allowed contract types for user's role
                     allowed_types = ContractTypePolicy.objects.filter(
-                        role=prof.role,
-                        department=prof.department,
+                        role=profile.role,
+                        department=profile.department,
                         can_view=True,
                     ).values_list('contract_type', flat=True)
-                    # Only show contracts from user's department (removed department__isnull vulnerability)
+
+                    # Filter by allowed types (null types are allowed for all)
                     queryset = queryset.filter(
-                        models.Q(department=prof.department) &
-                        (models.Q(contract_type__isnull=True) | models.Q(contract_type__in=list(allowed_types)))
+                        models.Q(contract_type__isnull=True) |
+                        models.Q(contract_type__in=list(allowed_types))
                     )
                 except Exception as e:
-                    # Log the error properly instead of silently catching
                     logger = logging.getLogger(__name__)
                     logger.error(f"Error filtering contracts by policy: {str(e)}")
-                    # Fallback: only show user's department contracts
-                    queryset = queryset.filter(department=prof.department)
+                    # Fallback: queryset already filtered by department via parent
+
         return queryset
 
     def retrieve(self, request, *args, **kwargs):
         """
-        Retrieve a single contract with RBAC object-level permission check.
+        Retrieve a single contract.
+
+        Object-level permission checks are handled by ContractPermission via get_object().
+        No hardcoded RBAC checks needed!
         """
         contract = self.get_object()
-
-        # RBAC: require can_view unless admin
-        user = request.user
-        prof = getattr(user, 'profile', None)
-        is_admin = getattr(user, 'is_superuser', False) or (prof and prof.role == 'administrator')
-        if not is_admin and not ContractsRBAC(user).can_view(contract):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have permission to view this contract")
-
         serializer = self.get_serializer(contract)
         return Response(serializer.data)
 
@@ -328,15 +364,10 @@ class ContractViewSet(viewsets.ModelViewSet):
         """
         Update contract details (title, status, placeholder_values).
         Cannot update if contract is already signed.
+
+        Object-level permission checks are handled by ContractPermission via get_object().
         """
         contract = self.get_object()
-
-        # RBAC: require can_update unless admin
-        user = request.user
-        prof = getattr(user, 'profile', None)
-        is_admin = getattr(user, 'is_superuser', False) or (prof and prof.role == 'administrator')
-        if not is_admin and not ContractsRBAC(user).can_update(contract):
-            return Response({'error': 'Not allowed to update this contract'}, status=status.HTTP_403_FORBIDDEN)
 
         if contract.status == 'signed':
             return Response(
@@ -365,15 +396,10 @@ class ContractViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Delete a contract. Cannot delete signed contracts.
+
+        Object-level permission checks are handled by ContractPermission via get_object().
         """
         contract = self.get_object()
-
-        # RBAC: require can_delete unless admin
-        user = request.user
-        prof = getattr(user, 'profile', None)
-        is_admin = getattr(user, 'is_superuser', False) or (prof and prof.role == 'administrator')
-        if not is_admin and not ContractsRBAC(user).can_delete(contract):
-            return Response({'error': 'Not allowed to delete this contract'}, status=status.HTTP_403_FORBIDDEN)
 
         if contract.status == 'signed':
             return Response(
@@ -492,6 +518,8 @@ class ContractViewSet(viewsets.ModelViewSet):
         Regenerate a contract with updated placeholder values (async).
         Only allowed for draft contracts.
         Returns immediately with status='processing'.
+
+        Object-level permission checks are handled by ContractPermission via get_object().
         """
         import logging
         from .tasks import regenerate_contract_async
@@ -499,13 +527,6 @@ class ContractViewSet(viewsets.ModelViewSet):
         logger = logging.getLogger(__name__)
 
         contract = self.get_object()
-
-        # RBAC: require can_regenerate unless admin
-        user = request.user
-        prof = getattr(user, 'profile', None)
-        is_admin = getattr(user, 'is_superuser', False) or (prof and prof.role == 'administrator')
-        if not is_admin and not ContractsRBAC(user).can_regenerate(contract):
-            return Response({'error': 'Not allowed to regenerate this contract'}, status=status.HTTP_403_FORBIDDEN)
 
         if contract.status not in ['draft', 'failed']:
             return Response(
