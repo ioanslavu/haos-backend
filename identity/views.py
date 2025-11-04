@@ -65,6 +65,13 @@ class EntityViewSet(GlobalResourceViewSet):
     - Currently: All authenticated users can access
     - Future: Will check EntityUsage for department-scoped visibility
 
+    TODO: GLOBAL ACCESS - All users see all entities
+    Currently: All employees and managers see all entities globally (no department filtering)
+    This allows cross-department entity usage (e.g., Digital dept can see Music clients).
+
+    Future (Phase 7 - if needed): Implement EntityUsage model to track which departments
+    use which entities and filter visibility accordingly. See REFACTOR_PROGRESS.md.
+
     Note: Related data (campaigns, contact persons) shown in custom actions
     is filtered by department using the respective ViewSet RBAC logic.
 

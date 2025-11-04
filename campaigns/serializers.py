@@ -1,22 +1,23 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Campaign, CampaignHandler
+from .models import Campaign, CampaignAssignment
 from identity.serializers import EntityListSerializer, ContactPersonSerializer
 from catalog.serializers import RecordingListSerializer
 
 User = get_user_model()
 
 
-class CampaignHandlerSerializer(serializers.ModelSerializer):
-    """Serializer for CampaignHandler"""
+class CampaignAssignmentSerializer(serializers.ModelSerializer):
+    """Serializer for CampaignAssignment (users assigned to campaigns)"""
     user_email = serializers.EmailField(source='user.email', read_only=True)
     user_name = serializers.SerializerMethodField()
     role_display = serializers.CharField(source='get_role_display', read_only=True)
+    assigned_by_email = serializers.EmailField(source='assigned_by.email', read_only=True, allow_null=True)
 
     class Meta:
-        model = CampaignHandler
-        fields = ['id', 'user', 'user_email', 'user_name', 'role', 'role_display', 'assigned_at']
-        read_only_fields = ['assigned_at']
+        model = CampaignAssignment
+        fields = ['id', 'user', 'user_email', 'user_name', 'role', 'role_display', 'assigned_at', 'assigned_by', 'assigned_by_email']
+        read_only_fields = ['assigned_at', 'assigned_by']
 
     def get_user_name(self, obj):
         return obj.user.get_full_name() if obj.user else None
@@ -143,7 +144,7 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
     brand = EntityListSerializer(read_only=True)
     song = RecordingListSerializer(read_only=True)
     contact_person = ContactPersonSerializer(read_only=True)
-    handlers = CampaignHandlerSerializer(many=True, read_only=True)
+    assignments = CampaignAssignmentSerializer(many=True, read_only=True)
     created_by_name = serializers.SerializerMethodField()
     department_display = serializers.SerializerMethodField()
     service_types_display = serializers.SerializerMethodField()
@@ -190,7 +191,7 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
             'department_data',
             'confirmed_at',
             'notes',
-            'handlers',
+            'assignments',
             'tasks_count',
             'activities_count',
             'created_by',
@@ -241,7 +242,7 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
 
 class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating campaigns"""
-    handlers = CampaignHandlerSerializer(many=True, required=False)
+    assignments = CampaignAssignmentSerializer(many=True, required=False)
 
     class Meta:
         model = Campaign
@@ -273,7 +274,7 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
             'department_data',
             'confirmed_at',
             'notes',
-            'handlers',
+            'assignments',
         ]
         read_only_fields = ['id']
         extra_kwargs = {
@@ -364,9 +365,9 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
                 # Auto-set department for non-admins (ignore any department sent in request)
                 data['department'] = profile.department
 
-        # Validate handlers belong to the same department as campaign
-        handlers_data = data.get('handlers', [])
-        if handlers_data:
+        # Validate assignments belong to the same department as campaign
+        assignments_data = data.get('assignments', [])
+        if assignments_data:
             # Determine campaign department
             campaign_department = None
             if self.instance:
@@ -377,27 +378,27 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
                 campaign_department = request.user.profile.department
 
             if campaign_department:
-                invalid_handlers = []
-                for handler_data in handlers_data:
-                    handler_user = handler_data.get('user')
-                    if handler_user:
-                        if not hasattr(handler_user, 'profile') or \
-                           handler_user.profile.department != campaign_department:
-                            invalid_handlers.append(
-                                f"{handler_user.get_full_name() or handler_user.email}"
+                invalid_users = []
+                for assignment_data in assignments_data:
+                    assigned_user = assignment_data.get('user')
+                    if assigned_user:
+                        if not hasattr(assigned_user, 'profile') or \
+                           assigned_user.profile.department != campaign_department:
+                            invalid_users.append(
+                                f"{assigned_user.get_full_name() or assigned_user.email}"
                             )
 
-                if invalid_handlers:
+                if invalid_users:
                     raise serializers.ValidationError({
-                        'handlers': f"The following users are not from the {campaign_department} department "
-                                  f"and cannot be assigned as handlers: {', '.join(invalid_handlers)}"
+                        'assignments': f"The following users are not from the {campaign_department} department "
+                                      f"and cannot be assigned: {', '.join(invalid_users)}"
                     })
 
         return data
 
     def create(self, validated_data):
-        """Set created_by from request user, handle handlers"""
-        handlers_data = validated_data.pop('handlers', [])
+        """Set created_by from request user, handle assignments"""
+        assignments_data = validated_data.pop('assignments', [])
 
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
@@ -407,40 +408,44 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
 
         campaign = super().create(validated_data)
 
-        # Create handlers
-        # By default, add the creator as lead if no handlers specified
-        if not handlers_data and request and hasattr(request, 'user'):
-            CampaignHandler.objects.create(
+        # Create assignments
+        # By default, add the creator as lead if no assignments specified
+        if not assignments_data and request and hasattr(request, 'user'):
+            CampaignAssignment.objects.create(
                 campaign=campaign,
                 user=request.user,
-                role='lead'
+                role='lead',
+                assigned_by=request.user
             )
         else:
-            for handler_data in handlers_data:
-                CampaignHandler.objects.create(
+            for assignment_data in assignments_data:
+                CampaignAssignment.objects.create(
                     campaign=campaign,
-                    **handler_data
+                    assigned_by=request.user if request and hasattr(request, 'user') else None,
+                    **assignment_data
                 )
 
         return campaign
 
     def update(self, instance, validated_data):
-        """Update campaign and handlers"""
-        handlers_data = validated_data.pop('handlers', None)
+        """Update campaign and assignments"""
+        assignments_data = validated_data.pop('assignments', None)
 
         # Update campaign fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Update handlers if provided
-        if handlers_data is not None:
-            # Clear existing handlers and recreate
-            instance.handlers.all().delete()
-            for handler_data in handlers_data:
-                CampaignHandler.objects.create(
+        # Update assignments if provided
+        if assignments_data is not None:
+            request = self.context.get('request')
+            # Clear existing assignments and recreate
+            instance.assignments.all().delete()
+            for assignment_data in assignments_data:
+                CampaignAssignment.objects.create(
                     campaign=instance,
-                    **handler_data
+                    assigned_by=request.user if request and hasattr(request, 'user') else None,
+                    **assignment_data
                 )
 
         return instance

@@ -353,10 +353,15 @@ class Campaign(models.Model):
         super().save(*args, **kwargs)
 
 
-class CampaignHandler(models.Model):
+class CampaignAssignment(models.Model):
     """
-    Tracks which users are handling/assigned to a campaign.
-    Supports multiple handlers with different roles.
+    Tracks which users are assigned to a campaign.
+    Supports multiple assignments with different roles.
+
+    Standard assignment pattern:
+    - Parent FK: related_name='assignments'
+    - User FK: field name='user'
+    - M2M lookup: 'assignments__user'
     """
 
     ROLE_CHOICES = [
@@ -368,7 +373,7 @@ class CampaignHandler(models.Model):
     campaign = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,
-        related_name='handlers'
+        related_name='assignments'
     )
 
     user = models.ForeignKey(
@@ -381,10 +386,18 @@ class CampaignHandler(models.Model):
         max_length=20,
         choices=ROLE_CHOICES,
         default='support',
-        help_text="Role of this handler in the campaign"
+        help_text="Role of this user in the campaign"
     )
 
     assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        help_text="User who created this assignment"
+    )
 
     class Meta:
         unique_together = ['campaign', 'user']
@@ -393,8 +406,8 @@ class CampaignHandler(models.Model):
             models.Index(fields=['campaign', 'role']),
             models.Index(fields=['user', 'role']),
         ]
-        verbose_name = 'Campaign Handler'
-        verbose_name_plural = 'Campaign Handlers'
+        verbose_name = 'Campaign Assignment'
+        verbose_name_plural = 'Campaign Assignments'
 
     def __str__(self):
         return f"{self.user.email} - {self.campaign.campaign_name} ({self.get_role_display()})"

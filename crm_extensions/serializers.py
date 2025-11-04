@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Task, Activity, CampaignMetrics, EntityChangeRequest
+from .models import Task, TaskAssignment, Activity, CampaignMetrics, EntityChangeRequest
 from campaigns.models import Campaign
 from identity.models import Entity
 from contracts.models import Contract
@@ -8,12 +8,27 @@ from contracts.models import Contract
 User = get_user_model()
 
 
+class TaskAssignmentSerializer(serializers.ModelSerializer):
+    """Serializer for TaskAssignment (users assigned to tasks)"""
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    assigned_by_email = serializers.EmailField(source='assigned_by.email', read_only=True, allow_null=True)
+
+    class Meta:
+        model = TaskAssignment
+        fields = ['id', 'user', 'user_email', 'user_name', 'role', 'role_display', 'assigned_at', 'assigned_by', 'assigned_by_email']
+        read_only_fields = ['assigned_at', 'assigned_by']
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() if obj.user else None
+
+
 class TaskSerializer(serializers.ModelSerializer):
     """
     Serializer for Task model with nested relationship details.
     """
-    assigned_to_detail = serializers.SerializerMethodField(read_only=True)  # DEPRECATED
-    assigned_to_users_detail = serializers.SerializerMethodField(read_only=True)
+    assignments = TaskAssignmentSerializer(many=True, read_only=True)
     created_by_detail = serializers.SerializerMethodField(read_only=True)
     campaign_detail = serializers.SerializerMethodField(read_only=True)
     entity_detail = serializers.SerializerMethodField(read_only=True)
@@ -43,10 +58,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'contract_detail',
 
             # Assignment
-            'assigned_to',  # DEPRECATED
-            'assigned_to_detail',  # DEPRECATED
-            'assigned_to_users',
-            'assigned_to_users_detail',
+            'assignments',
             'created_by',
             'created_by_detail',
             'department',
@@ -81,26 +93,6 @@ class TaskSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at', 'started_at', 'completed_at', 'follow_up_reminder_sent']
-
-    def get_assigned_to_detail(self, obj):
-        # DEPRECATED: Use get_assigned_to_users_detail instead
-        if obj.assigned_to:
-            return {
-                'id': obj.assigned_to.id,
-                'email': obj.assigned_to.email,
-                'full_name': f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}".strip() or obj.assigned_to.email
-            }
-        return None
-
-    def get_assigned_to_users_detail(self, obj):
-        return [
-            {
-                'id': user.id,
-                'email': user.email,
-                'full_name': f"{user.first_name} {user.last_name}".strip() or user.email
-            }
-            for user in obj.assigned_to_users.all()
-        ]
 
     def get_created_by_detail(self, obj):
         if obj.created_by:
@@ -144,10 +136,20 @@ class TaskSerializer(serializers.ModelSerializer):
 class TaskCreateUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating and updating tasks.
+    Note: assigned_users is handled via TaskAssignment in the ViewSet.
     """
+    # Allow specifying user IDs for assignment (write-only)
+    assigned_user_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text="List of user IDs to assign to this task"
+    )
+
     class Meta:
         model = Task
         fields = [
+            'id',  # Include id in response
             'title',
             'description',
             'task_type',
@@ -157,8 +159,7 @@ class TaskCreateUpdateSerializer(serializers.ModelSerializer):
             'campaign',
             'entity',
             'contract',
-            'assigned_to',  # DEPRECATED
-            'assigned_to_users',
+            'assigned_user_ids',  # For specifying assignments on create/update
             'department',
             'due_date',
             'reminder_date',
@@ -169,13 +170,24 @@ class TaskCreateUpdateSerializer(serializers.ModelSerializer):
             'metadata',
             'notes',
         ]
+        read_only_fields = ['id']
 
     def validate(self, data):
-        # Ensure at least one association is provided
-        if not any([data.get('campaign'), data.get('entity'), data.get('contract')]):
-            raise serializers.ValidationError(
-                "At least one of campaign, entity, or contract must be provided."
-            )
+        # Ensure at least one association is provided (only on create, not update)
+        if not self.instance:  # Creating new task
+            if not any([data.get('campaign'), data.get('entity'), data.get('contract')]):
+                raise serializers.ValidationError(
+                    "At least one of campaign, entity, or contract must be provided."
+                )
+        # For updates, check if we have at least one association (from instance or data)
+        elif self.instance:
+            has_campaign = data.get('campaign') or self.instance.campaign
+            has_entity = data.get('entity') or self.instance.entity
+            has_contract = data.get('contract') or self.instance.contract
+            if not any([has_campaign, has_entity, has_contract]):
+                raise serializers.ValidationError(
+                    "At least one of campaign, entity, or contract must be provided."
+                )
         return data
 
 

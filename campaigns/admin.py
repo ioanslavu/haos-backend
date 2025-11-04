@@ -1,12 +1,12 @@
 from django.contrib import admin
-from .models import Campaign, CampaignHandler
+from .models import Campaign, CampaignAssignment
 
 
-class CampaignHandlerInline(admin.TabularInline):
-    model = CampaignHandler
+class CampaignAssignmentInline(admin.TabularInline):
+    model = CampaignAssignment
     extra = 1
-    fields = ['user', 'role', 'assigned_at']
-    readonly_fields = ['assigned_at']
+    fields = ['user', 'role', 'assigned_at', 'assigned_by']
+    readonly_fields = ['assigned_at', 'assigned_by']
     autocomplete_fields = ['user']
 
 
@@ -48,7 +48,7 @@ class CampaignAdmin(admin.ModelAdmin):
         }),
     )
 
-    inlines = [CampaignHandlerInline]
+    inlines = [CampaignAssignmentInline]
 
     def save_model(self, request, obj, form, change):
         if not change:  # Only set created_by on creation

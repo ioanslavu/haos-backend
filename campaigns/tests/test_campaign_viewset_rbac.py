@@ -5,7 +5,7 @@ Tests cover:
 - List filtering by role and department
 - Retrieve permissions
 - Create/Update/Delete permissions
-- Through model M2M assignment (CampaignHandler)
+- Through model M2M assignment (CampaignAssignment)
 - Edge cases and security vulnerabilities
 """
 from django.test import TestCase
@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from campaigns.models import Campaign, CampaignHandler
+from campaigns.models import Campaign, CampaignAssignment
 from identity.models import Entity
 from catalog.models import Work
 from api.models import Department, Role, Role, UserProfile
@@ -71,28 +71,34 @@ class CampaignViewSetListFilteringTestCase(TestCase):
 
         # Create campaigns in different departments
         self.campaign_digital_emp1 = Campaign.objects.create(
-            title='Digital Campaign 1',
+            campaign_name='Digital Campaign 1',
             client=self.entity,
+            brand=self.entity,
             department=self.dept_digital,
-            created_by=self.digital_employee1
+            created_by=self.digital_employee1,
+            value='5000.00'
         )
 
         self.campaign_digital_emp2 = Campaign.objects.create(
-            title='Digital Campaign 2',
+            campaign_name='Digital Campaign 2',
             client=self.entity,
+            brand=self.entity,
             department=self.dept_digital,
-            created_by=self.digital_employee2
+            created_by=self.digital_employee2,
+            value='5000.00'
         )
 
         self.campaign_sales = Campaign.objects.create(
-            title='Sales Campaign 1',
+            campaign_name='Sales Campaign 1',
             client=self.entity,
+            brand=self.entity,
             department=self.dept_sales,
-            created_by=self.sales_employee
+            created_by=self.sales_employee,
+            value='5000.00'
         )
 
         # Assign employee1 to campaign 2 via handler
-        CampaignHandler.objects.create(
+        CampaignAssignment.objects.create(
             campaign=self.campaign_digital_emp2,
             user=self.digital_employee1,
             role='support'
@@ -101,7 +107,7 @@ class CampaignViewSetListFilteringTestCase(TestCase):
     def test_admin_sees_all_campaigns(self):
         """Admin should see all campaigns across all departments."""
         self.client.force_authenticate(user=self.admin)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should see all 3 campaigns
@@ -110,7 +116,7 @@ class CampaignViewSetListFilteringTestCase(TestCase):
     def test_manager_sees_department_campaigns_only(self):
         """Manager should see all campaigns in their department only."""
         self.client.force_authenticate(user=self.digital_manager)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should see 2 digital campaigns
@@ -123,7 +129,7 @@ class CampaignViewSetListFilteringTestCase(TestCase):
     def test_employee_sees_only_owned_and_assigned(self):
         """Employee should see only campaigns they created or are assigned to."""
         self.client.force_authenticate(user=self.digital_employee1)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should see 2 campaigns (created 1, assigned to 1)
@@ -136,7 +142,7 @@ class CampaignViewSetListFilteringTestCase(TestCase):
     def test_employee_does_not_see_other_department(self):
         """Employee should not see campaigns from other departments."""
         self.client.force_authenticate(user=self.digital_employee1)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -147,7 +153,7 @@ class CampaignViewSetListFilteringTestCase(TestCase):
     def test_employee_does_not_see_unrelated_campaign_in_same_dept(self):
         """Employee should not see campaigns in same dept they're not related to."""
         self.client.force_authenticate(user=self.digital_employee2)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should see only 1 campaign (the one they created)
@@ -156,8 +162,9 @@ class CampaignViewSetListFilteringTestCase(TestCase):
 
     def test_unauthenticated_user_denied(self):
         """Unauthenticated users should be denied."""
-        response = self.client.get('/api/campaigns/')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = self.client.get('/api/v1/campaigns/')
+        # DRF returns 403 when permission classes deny access to unauthenticated users
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class CampaignViewSetRetrievePermissionsTestCase(TestCase):
@@ -190,14 +197,16 @@ class CampaignViewSetRetrievePermissionsTestCase(TestCase):
 
         # Create campaign
         self.campaign = Campaign.objects.create(
-            title='Test Campaign',
+            campaign_name='Test Campaign',
             client=self.entity,
+            brand=self.entity,
             department=self.dept,
-            created_by=self.owner
+            created_by=self.owner,
+            value='5000.00'
         )
 
         # Assign one user
-        CampaignHandler.objects.create(
+        CampaignAssignment.objects.create(
             campaign=self.campaign,
             user=self.assigned,
             role='support'
@@ -206,7 +215,7 @@ class CampaignViewSetRetrievePermissionsTestCase(TestCase):
     def test_owner_can_retrieve(self):
         """Owner can retrieve their campaign."""
         self.client.force_authenticate(user=self.owner)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['id'], self.campaign.id)
@@ -214,7 +223,7 @@ class CampaignViewSetRetrievePermissionsTestCase(TestCase):
     def test_assigned_user_can_retrieve(self):
         """Assigned user can retrieve campaign."""
         self.client.force_authenticate(user=self.assigned)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['id'], self.campaign.id)
@@ -222,7 +231,7 @@ class CampaignViewSetRetrievePermissionsTestCase(TestCase):
     def test_other_user_cannot_retrieve(self):
         """Other user in same dept cannot retrieve unrelated campaign."""
         self.client.force_authenticate(user=self.other)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -238,7 +247,7 @@ class CampaignViewSetRetrievePermissionsTestCase(TestCase):
         manager_profile.save()
 
         self.client.force_authenticate(user=manager)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -254,7 +263,7 @@ class CampaignViewSetRetrievePermissionsTestCase(TestCase):
         admin_profile.save()
 
         self.client.force_authenticate(user=admin)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -265,7 +274,8 @@ class CampaignViewSetCreateTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        self.dept, _ = Department.objects.get_or_create(code='test', defaults={'name': 'Test'})
+        # Use digital department so campaigns auto-assigned to user's dept will be digital
+        self.dept, _ = Department.objects.get_or_create(code='digital', defaults={'name': 'Digital'})
         self.entity = Entity.objects.create(display_name='Entity', kind='PJ')
 
         self.user = User.objects.create_user(username='user', password='pass')
@@ -279,11 +289,13 @@ class CampaignViewSetCreateTestCase(TestCase):
         self.client.force_authenticate(user=self.user)
 
         data = {
-            'title': 'New Campaign',
-            'client': self.entity.id,
+            'campaign_name': 'New Campaign',
+            'brand': self.entity.id,
+            'client': self.entity.id,  # Both client and brand are required
+            'value': '10000.00',  # Required for service_fee pricing model (default)
         }
 
-        response = self.client.post('/api/campaigns/', data)
+        response = self.client.post('/api/v1/campaigns/', data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -299,11 +311,13 @@ class CampaignViewSetCreateTestCase(TestCase):
         self.client.force_authenticate(user=self.user)
 
         data = {
-            'title': 'New Campaign',
+            'campaign_name': 'New Campaign',
+            'brand': self.entity.id,
             'client': self.entity.id,
+            'value': '10000.00',  # Required for service_fee pricing model (default)
         }
 
-        response = self.client.post('/api/campaigns/', data)
+        response = self.client.post('/api/v1/campaigns/', data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -334,41 +348,43 @@ class CampaignViewSetUpdateDeleteTestCase(TestCase):
         self.other_profile.save()
 
         self.campaign = Campaign.objects.create(
-            title='Test Campaign',
+            campaign_name='Test Campaign',
             client=self.entity,
+            brand=self.entity,
             department=self.dept,
-            created_by=self.owner
+            created_by=self.owner,
+            value='5000.00'  # Required for service_fee pricing model validation
         )
 
     def test_owner_can_update(self):
         """Owner can update their campaign."""
         self.client.force_authenticate(user=self.owner)
 
-        data = {'title': 'Updated Title'}
-        response = self.client.patch(f'/api/campaigns/{self.campaign.id}/', data)
+        data = {'campaign_name': 'Updated Title'}
+        response = self.client.patch(f'/api/v1/campaigns/{self.campaign.id}/', data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.campaign.refresh_from_db()
-        self.assertEqual(self.campaign.title, 'Updated Title')
+        self.assertEqual(self.campaign.campaign_name, 'Updated Title')
 
     def test_other_user_cannot_update(self):
         """Other user cannot update unrelated campaign."""
         self.client.force_authenticate(user=self.other)
 
-        data = {'title': 'Hacked Title'}
-        response = self.client.patch(f'/api/campaigns/{self.campaign.id}/', data)
+        data = {'campaign_name': 'Hacked Title'}
+        response = self.client.patch(f'/api/v1/campaigns/{self.campaign.id}/', data)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         self.campaign.refresh_from_db()
-        self.assertEqual(self.campaign.title, 'Test Campaign')  # Unchanged
+        self.assertEqual(self.campaign.campaign_name, 'Test Campaign')  # Unchanged
 
     def test_owner_can_delete(self):
         """Owner can delete their campaign."""
         self.client.force_authenticate(user=self.owner)
 
-        response = self.client.delete(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.delete(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Campaign.objects.filter(id=self.campaign.id).exists())
@@ -377,14 +393,14 @@ class CampaignViewSetUpdateDeleteTestCase(TestCase):
         """Other user cannot delete unrelated campaign."""
         self.client.force_authenticate(user=self.other)
 
-        response = self.client.delete(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.delete(f'/api/v1/campaigns/{self.campaign.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(Campaign.objects.filter(id=self.campaign.id).exists())
 
 
-class CampaignHandlerAssignmentTestCase(TestCase):
-    """Test CampaignHandler through model assignment logic."""
+class CampaignAssignmentTestCase(TestCase):
+    """Test CampaignAssignment through model assignment logic."""
 
     def setUp(self):
         self.client = APIClient()
@@ -417,26 +433,28 @@ class CampaignHandlerAssignmentTestCase(TestCase):
         self.observer_profile.save()
 
         self.campaign = Campaign.objects.create(
-            title='Test Campaign',
+            campaign_name='Test Campaign',
             client=self.entity,
+            brand=self.entity,
             department=self.dept,
-            created_by=self.owner
+            created_by=self.owner,
+            value='5000.00'
         )
 
         # Assign different handler roles
-        CampaignHandler.objects.create(
+        CampaignAssignment.objects.create(
             campaign=self.campaign,
             user=self.assigned_lead,
             role='lead'
         )
 
-        CampaignHandler.objects.create(
+        CampaignAssignment.objects.create(
             campaign=self.campaign,
             user=self.assigned_support,
             role='support'
         )
 
-        CampaignHandler.objects.create(
+        CampaignAssignment.objects.create(
             campaign=self.campaign,
             user=self.assigned_observer,
             role='observer'
@@ -446,23 +464,23 @@ class CampaignHandlerAssignmentTestCase(TestCase):
         """All handler roles should have access to campaign."""
         # Test lead
         self.client.force_authenticate(user=self.assigned_lead)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Test support
         self.client.force_authenticate(user=self.assigned_support)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Test observer
         self.client.force_authenticate(user=self.assigned_observer)
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_handler_appears_in_list(self):
         """Assigned users should see campaign in their list."""
         self.client.force_authenticate(user=self.assigned_lead)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         campaign_ids = [c['id'] for c in response.data['results']]
@@ -471,7 +489,7 @@ class CampaignHandlerAssignmentTestCase(TestCase):
     def test_removing_handler_removes_access(self):
         """Removing handler should remove access for employees."""
         # Remove lead handler
-        CampaignHandler.objects.filter(
+        CampaignAssignment.objects.filter(
             campaign=self.campaign,
             user=self.assigned_lead
         ).delete()
@@ -479,12 +497,12 @@ class CampaignHandlerAssignmentTestCase(TestCase):
         self.client.force_authenticate(user=self.assigned_lead)
 
         # Should no longer see in list
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
         campaign_ids = [c['id'] for c in response.data['results']]
         self.assertNotIn(self.campaign.id, campaign_ids)
 
         # Should not be able to retrieve
-        response = self.client.get(f'/api/campaigns/{self.campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{self.campaign.id}/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -501,14 +519,16 @@ class CampaignViewSetEdgeCasesTestCase(TestCase):
         user = User.objects.create_user(username='noprofile', password='pass')
 
         Campaign.objects.create(
-            title='Campaign',
+            campaign_name='Campaign',
             client=self.entity,
+            brand=self.entity,
             department=self.dept,
-            created_by=user
+            created_by=user,
+            value='5000.00'
         )
 
         self.client.force_authenticate(user=user)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
@@ -525,13 +545,15 @@ class CampaignViewSetEdgeCasesTestCase(TestCase):
         profile.save()
 
         Campaign.objects.create(
-            title='Campaign',
+            campaign_name='Campaign',
             client=self.entity,
-            department=self.dept
+            brand=self.entity,
+            department=self.dept,
+            value='5000.00'
         )
 
         self.client.force_authenticate(user=user)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
@@ -557,20 +579,22 @@ class CampaignViewSetEdgeCasesTestCase(TestCase):
         employee_profile.save()
 
         campaign = Campaign.objects.create(
-            title='No Dept Campaign',
+            campaign_name='No Dept Campaign',
             client=self.entity,
+            brand=self.entity,
             department=None,
-            created_by=employee
+            created_by=employee,
+            value='5000.00'
         )
 
         # Admin can see it
         self.client.force_authenticate(user=admin)
-        response = self.client.get(f'/api/campaigns/{campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{campaign.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Employee cannot see it (even though they created it)
         self.client.force_authenticate(user=employee)
-        response = self.client.get(f'/api/campaigns/{campaign.id}/')
+        response = self.client.get(f'/api/v1/campaigns/{campaign.id}/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_deleted_department_prevents_access(self):
@@ -587,18 +611,23 @@ class CampaignViewSetEdgeCasesTestCase(TestCase):
         profile.save()
 
         campaign = Campaign.objects.create(
-            title='Campaign',
+            campaign_name='Campaign',
             client=self.entity,
+            brand=self.entity,
             department=dept,
-            created_by=user
+            created_by=user,
+            value='5000.00'
         )
 
         # Delete department
-        dept.delete()
-        profile.refresh_from_db()
+        # Simulate deleted department by setting to None
+        campaign.department = None
+        campaign.save()
+        profile.department = None
+        profile.save()
 
         self.client.force_authenticate(user=user)
-        response = self.client.get('/api/campaigns/')
+        response = self.client.get('/api/v1/campaigns/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)

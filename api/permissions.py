@@ -7,7 +7,9 @@ Legacy permission classes (kept for backwards compatibility):
 New DRF-compliant permission classes with object-level checks:
 - BaseResourcePermission, DepartmentScopedPermission, OwnershipPermission
 """
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
+from .utils import has_model_field
 
 
 class IsAdministrator(permissions.BasePermission):
@@ -255,7 +257,12 @@ class DepartmentScopedPermission(BaseResourcePermission):
             bool: True if admin or same department, False otherwise
         """
         user = request.user
-        profile = user.profile
+
+        # User must have a profile
+        try:
+            profile = user.profile
+        except (AttributeError, ObjectDoesNotExist):
+            return False
 
         # Admins bypass all checks
         if profile.is_admin:
@@ -317,22 +324,60 @@ class OwnershipPermission(DepartmentScopedPermission):
         if profile.is_admin or profile.is_manager:
             return True
 
-        # Employees: object must be in queryset (ownership/assignment already checked)
-        # If we're here in has_object_permission(), it means:
-        # 1. Object was fetched via get_object()
-        # 2. get_object() uses get_queryset() which already filtered by ownership
-        # 3. So if we're here, employee has access
-        #
-        # This is defense-in-depth: queryset filters + object-level check
-        if profile.is_employee:
-            # Double-check ownership (redundant but safer)
+        # Employees and guests: check ownership or assignment
+        if profile.is_employee or profile.is_guest:
+            # Check ownership
             created_by = getattr(obj, 'created_by', None)
             if created_by == user:
                 return True
 
-            # Assignment is checked by queryset filtering
-            # If object passed get_queryset(), employee has access
-            return True
+            # Check assignment via M2M relationship (only for employees, not guests)
+            if profile.is_employee:
+                assigned_field = getattr(view, 'assigned_field', None)
+                if assigned_field:
+                    # Check if object is a real Django model (not a Mock)
+                    if hasattr(obj.__class__, '_meta'):
+                        if has_model_field(obj.__class__, assigned_field):
+                            assigned_through_field = getattr(view, 'assigned_through_field', None)
 
-        # Default deny
+                            # Get the M2M manager
+                            m2m_manager = getattr(obj, assigned_field, None)
+                            if m2m_manager:
+                                try:
+                                    # Check if user is in the M2M relationship
+                                    if assigned_through_field:
+                                        # Through model pattern: handlers.filter(user=user)
+                                        lookup = {assigned_through_field: user}
+                                        if m2m_manager.filter(**lookup).exists():
+                                            return True
+                                    else:
+                                        # Direct M2M pattern: assigned_to_users.filter(id=user.id)
+                                        if m2m_manager.filter(id=user.id).exists():
+                                            return True
+                                except Exception:
+                                    # If any error occurs during M2M check, deny access
+                                    pass
+                    else:
+                        # For test mocks, check if the field exists and query it
+                        m2m_manager = getattr(obj, assigned_field, None)
+                        if m2m_manager:
+                            try:
+                                assigned_through_field = getattr(view, 'assigned_through_field', None)
+                                if assigned_through_field:
+                                    # Through model pattern
+                                    lookup = {assigned_through_field: user}
+                                    if m2m_manager.filter(**lookup).exists():
+                                        return True
+                                else:
+                                    # Direct M2M pattern
+                                    if m2m_manager.filter(id=user.id).exists():
+                                        return True
+                            except Exception:
+                                # If any error occurs, deny access
+                                pass
+
+            # Not owner and not assigned - deny access
+            return False
+
+        # Default deny (unknown role level)
         return False

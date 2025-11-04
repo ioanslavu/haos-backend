@@ -502,26 +502,20 @@ class PermissionEdgeCasesTestCase(TestCase):
         self.dept, _ = Department.objects.get_or_create(code='test', defaults={'name': 'Test'})
 
     def test_user_with_deleted_profile(self):
-        """User whose profile was deleted should be denied."""
+        """User profiles cannot be deleted - ProtectedError should be raised."""
         user = User.objects.create_user(username='test', password='pass')
         profile = user.profile
         profile.department = self.dept
         profile.role = Role.objects.get(code='digital_employee')
         profile.save()
 
-        # Delete profile
-        profile.delete()
+        # Attempt to delete profile should raise ProtectedError
+        from django.db.models.deletion import ProtectedError
+        with self.assertRaises(ProtectedError) as context:
+            profile.delete()
 
-        permission = DepartmentScopedPermission()
-        request = self.factory.get('/')
-        request.user = user
-        mock_view = Mock()
-        mock_obj = Mock()
-        mock_obj.department = self.dept
-
-        self.assertFalse(
-            permission.has_object_permission(request, mock_view, mock_obj)
-        )
+        # Verify the error message is clear
+        self.assertIn("Cannot delete UserProfile", str(context.exception))
 
     def test_user_with_deleted_department(self):
         """User whose department was deleted should be denied."""
@@ -532,9 +526,9 @@ class PermissionEdgeCasesTestCase(TestCase):
         profile.role = Role.objects.get(code='digital_employee')
         profile.save()
 
-        # Delete department
-        dept.delete()
-        profile.refresh_from_db()
+        # Simulate deleted department by removing it from profile
+        profile.department = None
+        profile.save()
 
         permission = DepartmentScopedPermission()
         request = self.factory.get('/')

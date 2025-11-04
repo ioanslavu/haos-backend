@@ -120,8 +120,11 @@ class BaseViewSet(viewsets.ModelViewSet):
             return queryset
 
         elif self.queryset_scoping == QuerysetScoping.GLOBAL:
-            # All employees can see everything
-            if profile.is_employee:
+            # TODO: GLOBAL ACCESS - All authenticated users see everything
+            # Currently: Employees and managers see all records globally
+            # Future: May implement department-scoped visibility via EntityUsage
+            # (see Phase 7 in REFACTOR_PROGRESS.md)
+            if profile.role.level >= 200:  # Employees (200+) and Managers (300+)
                 return queryset
             return queryset.none()
 

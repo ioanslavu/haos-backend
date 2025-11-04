@@ -84,6 +84,9 @@ urlpatterns = [
     path('api/v1/rights/', include('rights.urls')),
     path('api/v1/distribution/', include('distribution.urls')),
 
+    # Distributions API (long-term distribution deals)
+    path('api/v1/', include('distributions.urls')),
+
     # Campaigns API
     path('api/v1/', include('campaigns.urls')),
 

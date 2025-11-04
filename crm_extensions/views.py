@@ -59,10 +59,10 @@ class TaskViewSet(OwnedResourceViewSet):
     # BaseViewSet configuration (replaces hardcoded role checks)
     queryset_scoping = QuerysetScoping.DEPARTMENT_WITH_OWNERSHIP
     ownership_field = 'created_by'
-    assigned_field = 'assigned_to_users'
-    assigned_through_field = None  # Direct M2M (not through model)!
+    assigned_field = 'assignments'
+    assigned_through_field = 'user'  # TaskAssignment.user (standard pattern)
     select_related_fields = ['campaign', 'entity', 'contract', 'assigned_to', 'created_by', 'department', 'parent_task']
-    prefetch_related_fields = ['blocks_tasks', 'subtasks', 'assigned_to_users']
+    prefetch_related_fields = ['blocks_tasks', 'subtasks', 'assignments__user']
 
     def get_queryset(self):
         """
@@ -90,13 +90,13 @@ class TaskViewSet(OwnedResourceViewSet):
 
         my_tasks = self.request.query_params.get('my_tasks')
         if my_tasks == 'true':
-            queryset = queryset.filter(assigned_to_users=self.request.user)
+            queryset = queryset.filter(assigned_users=self.request.user)
 
         # Support filtering by multiple assignees
         assigned_to_in = self.request.query_params.get('assigned_to__in')
         if assigned_to_in:
             user_ids = [int(uid) for uid in assigned_to_in.split(',')]
-            queryset = queryset.filter(assigned_to_users__id__in=user_ids).distinct()
+            queryset = queryset.filter(assigned_users__id__in=user_ids).distinct()
 
         return queryset
 
@@ -117,12 +117,38 @@ class TaskViewSet(OwnedResourceViewSet):
         except Department.DoesNotExist:
             pass
 
+        # Extract assigned_user_ids before saving
+        assigned_user_ids = serializer.validated_data.pop('assigned_user_ids', None)
+
         # Save task with creator
         task = serializer.save(created_by=user, department=department)
 
-        # Auto-assign creator to task if no assignees specified
-        if not task.assigned_to_users.exists():
-            task.assigned_to_users.add(user)
+        # Handle task assignments
+        from .models import TaskAssignment
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        if assigned_user_ids:
+            # Create assignments for specified users
+            for user_id in assigned_user_ids:
+                try:
+                    assignee = User.objects.get(id=user_id)
+                    TaskAssignment.objects.create(
+                        task=task,
+                        user=assignee,
+                        role='assignee',
+                        assigned_by=user
+                    )
+                except User.DoesNotExist:
+                    pass  # Skip invalid user IDs
+        else:
+            # Auto-assign creator if no assignees specified
+            TaskAssignment.objects.create(
+                task=task,
+                user=user,
+                role='assignee',
+                assigned_by=user
+            )
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):

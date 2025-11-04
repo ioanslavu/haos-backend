@@ -40,10 +40,10 @@ class CampaignViewSet(OwnedResourceViewSet):
     # BaseViewSet configuration (replaces get_queryset hardcoded logic)
     queryset_scoping = QuerysetScoping.DEPARTMENT_WITH_OWNERSHIP
     ownership_field = 'created_by'
-    assigned_field = 'handlers'
-    assigned_through_field = 'user'  # CampaignHandler.user
+    assigned_field = 'assignments'
+    assigned_through_field = 'user'  # CampaignAssignment.user
     select_related_fields = ['client', 'artist', 'brand', 'song', 'created_by', 'department']
-    prefetch_related_fields = ['handlers__user']
+    prefetch_related_fields = ['assignments__user']
 
     # NO get_queryset() override needed - parent handles all RBAC filtering!
 

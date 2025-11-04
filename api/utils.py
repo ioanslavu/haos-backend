@@ -40,52 +40,77 @@ def get_m2m_lookup(model, field_name, through_user_field='user'):
     """
     Get correct M2M filter lookup, handling both direct M2M and through models.
 
+    Standard assignment pattern (used by Campaign and Task):
+    - related_name='assignments' on through model's parent FK
+    - field_name='user' on through model's user FK
+    - Result: 'assignments__user' lookup
+
     Django M2M fields can be:
-    1. Direct M2M: assigned_to_users = ManyToManyField(User)
-       - Filter: assigned_to_users=user
-    2. Through model: handlers = ManyToManyField(User, through='CampaignHandler')
-       - Through model has FK: CampaignHandler.user
-       - Filter: handlers__user=user
+    1. Direct M2M: assigned_to = ManyToManyField(User)
+       - Filter: assigned_to=user
+    2. Through model: assignments = ManyToManyField(User, through='TaskAssignment')
+       - Through model has FK: TaskAssignment.user
+       - Filter: assignments__user=user
+    3. Reverse FK: assignments (related_name from TaskAssignment.task)
+       - Through model: TaskAssignment with FKs to Task and User
+       - Filter: assignments__user=user
 
     This function detects the pattern and returns the correct lookup string.
 
     Args:
         model: Django model class
-        field_name: Name of M2M field (e.g., 'handlers', 'assigned_to_users')
+        field_name: Name of M2M field or reverse FK (e.g., 'assignments', 'assigned_to')
         through_user_field: FK name in through model (default: 'user', None for direct M2M)
 
     Returns:
         str: Lookup string for filtering
 
     Raises:
-        ValueError: If field doesn't exist or isn't a M2M field
+        ValueError: If field doesn't exist or isn't a M2M/reverse FK field
 
     Examples:
-        # Direct M2M: Task.assigned_to_users
-        >>> get_m2m_lookup(Task, 'assigned_to_users', None)
-        'assigned_to_users'
+        # Standard pattern: Task.assignments → TaskAssignment.user
+        >>> get_m2m_lookup(Task, 'assignments', 'user')
+        'assignments__user'
 
-        # Through model: Campaign.handlers → CampaignHandler.user
-        >>> get_m2m_lookup(Campaign, 'handlers', 'user')
-        'handlers__user'
+        # Standard pattern: Campaign.assignments → CampaignAssignment.user
+        >>> get_m2m_lookup(Campaign, 'assignments', 'user')
+        'assignments__user'
+
+        # Direct FK (deprecated): Task.assigned_to
+        >>> get_m2m_lookup(Task, 'assigned_to', None)
+        'assigned_to'
     """
     if not has_model_field(model, field_name):
         raise ValueError(f"Model {model.__name__} has no field '{field_name}'")
 
     field = model._meta.get_field(field_name)
 
-    if not field.many_to_many:
-        raise ValueError(
-            f"Field '{field_name}' on {model.__name__} is not a ManyToManyField"
-        )
+    # Handle ManyToMany fields
+    if field.many_to_many:
+        # Check if through model is auto-created or explicit
+        through_model = field.remote_field.through
+        is_auto_created = through_model._meta.auto_created
 
-    # Check if through model is auto-created or explicit
-    through_model = field.remote_field.through
-    is_auto_created = through_model._meta.auto_created
+        if is_auto_created or through_user_field is None:
+            # Direct M2M: assigned_to_users=user
+            return field_name
+        else:
+            # Custom through model: handlers__user=user
+            return f'{field_name}__{through_user_field}'
 
-    if is_auto_created or through_user_field is None:
-        # Direct M2M: assigned_to_users=user
-        return field_name
+    # Handle reverse ForeignKey relations (one-to-many)
+    elif field.one_to_many:
+        # Reverse FK: handlers (related_name from CampaignHandler)
+        # Always use through_user_field for reverse FK
+        if through_user_field:
+            return f'{field_name}__{through_user_field}'
+        else:
+            # If no through_user_field, just use the field name
+            # This would match against the FK directly
+            return field_name
+
     else:
-        # Custom through model: handlers__user=user
-        return f'{field_name}__{through_user_field}'
+        raise ValueError(
+            f"Field '{field_name}' on {model.__name__} is neither a ManyToManyField nor a reverse ForeignKey"
+        )

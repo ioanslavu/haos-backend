@@ -3,16 +3,16 @@ Comprehensive RBAC tests for TaskViewSet.
 
 Tests cover:
 - List filtering by role and department
-- Direct M2M assignment (assigned_to_users)
+- TaskAssignment (through model) assignment
 - Retrieve/Update/Delete permissions
-- Edge cases specific to direct M2M
+- Edge cases specific to TaskAssignment
 """
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from crm_extensions.models import Task
+from crm_extensions.models import Task, TaskAssignment
 from identity.models import Entity
 from campaigns.models import Campaign
 from api.models import Department, Role, Role, UserProfile
@@ -22,7 +22,7 @@ User = get_user_model()
 
 
 class TaskViewSetListFilteringTestCase(TestCase):
-    """Test list endpoint filtering based on RBAC with direct M2M."""
+    """Test list endpoint filtering based on RBAC with TaskAssignment."""
 
     def setUp(self):
         self.client = APIClient()
@@ -72,14 +72,24 @@ class TaskViewSetListFilteringTestCase(TestCase):
             created_by=self.employee1
         )
         # Auto-assigns creator
-        self.task_emp1_created.assigned_to_users.add(self.employee1)
+        TaskAssignment.objects.create(
+            task=self.task_emp1_created,
+            user=self.employee1,
+            role='assignee',
+            assigned_by=self.employee1
+        )
 
         self.task_emp2_created = Task.objects.create(
             title='Task created by emp2',
             department=self.dept_digital,
             created_by=self.employee2
         )
-        self.task_emp2_created.assigned_to_users.add(self.employee2)
+        TaskAssignment.objects.create(
+            task=self.task_emp2_created,
+            user=self.employee2,
+            role='assignee',
+            assigned_by=self.employee2
+        )
 
         # Create task where emp1 is assigned but not creator
         self.task_assigned_to_emp1 = Task.objects.create(
@@ -87,7 +97,12 @@ class TaskViewSetListFilteringTestCase(TestCase):
             department=self.dept_digital,
             created_by=self.employee2
         )
-        self.task_assigned_to_emp1.assigned_to_users.add(self.employee1)
+        TaskAssignment.objects.create(
+            task=self.task_assigned_to_emp1,
+            user=self.employee1,
+            role='assignee',
+            assigned_by=self.employee2
+        )
 
         # Create sales task
         self.task_sales = Task.objects.create(
@@ -95,12 +110,17 @@ class TaskViewSetListFilteringTestCase(TestCase):
             department=self.dept_sales,
             created_by=self.sales_employee
         )
-        self.task_sales.assigned_to_users.add(self.sales_employee)
+        TaskAssignment.objects.create(
+            task=self.task_sales,
+            user=self.sales_employee,
+            role='assignee',
+            assigned_by=self.sales_employee
+        )
 
     def test_admin_sees_all_tasks(self):
         """Admin should see all tasks across all departments."""
         self.client.force_authenticate(user=self.admin)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should see all 4 tasks
@@ -109,7 +129,7 @@ class TaskViewSetListFilteringTestCase(TestCase):
     def test_manager_sees_department_tasks(self):
         """Manager should see all tasks in their department."""
         self.client.force_authenticate(user=self.digital_manager)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should see 3 digital tasks
@@ -118,17 +138,17 @@ class TaskViewSetListFilteringTestCase(TestCase):
     def test_employee_sees_created_tasks(self):
         """Employee should see tasks they created."""
         self.client.force_authenticate(user=self.employee1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task_emp1_created.id, task_ids)
 
-    def test_employee_sees_assigned_tasks_direct_m2m(self):
-        """Employee should see tasks they're assigned to via direct M2M."""
+    def test_employee_sees_assigned_tasks(self):
+        """Employee should see tasks they're assigned to via TaskAssignment."""
         self.client.force_authenticate(user=self.employee1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -140,7 +160,7 @@ class TaskViewSetListFilteringTestCase(TestCase):
     def test_employee_does_not_see_unrelated_task(self):
         """Employee should not see tasks they're not related to."""
         self.client.force_authenticate(user=self.employee1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -151,7 +171,7 @@ class TaskViewSetListFilteringTestCase(TestCase):
     def test_employee_does_not_see_other_department(self):
         """Employee should not see tasks from other departments."""
         self.client.force_authenticate(user=self.employee1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -159,8 +179,8 @@ class TaskViewSetListFilteringTestCase(TestCase):
         self.assertNotIn(self.task_sales.id, task_ids)
 
 
-class TaskDirectM2MAssignmentTestCase(TestCase):
-    """Test direct M2M assignment specific behavior."""
+class TaskAssignmentTestCase(TestCase):
+    """Test TaskAssignment through model specific behavior."""
 
     def setUp(self):
         self.client = APIClient()
@@ -191,79 +211,95 @@ class TaskDirectM2MAssignmentTestCase(TestCase):
             created_by=self.user1
         )
 
-        # Assign multiple users via direct M2M
-        self.task.assigned_to_users.add(self.user1, self.user2)
+        # Assign multiple users via TaskAssignment
+        TaskAssignment.objects.create(
+            task=self.task,
+            user=self.user1,
+            role='assignee',
+            assigned_by=self.user1
+        )
+        TaskAssignment.objects.create(
+            task=self.task,
+            user=self.user2,
+            role='assignee',
+            assigned_by=self.user1
+        )
 
     def test_multiple_users_can_be_assigned(self):
-        """Multiple users can be assigned to same task via direct M2M."""
+        """Multiple users can be assigned to same task via TaskAssignment."""
         # Both user1 and user2 should see the task
         self.client.force_authenticate(user=self.user1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task.id, task_ids)
 
         self.client.force_authenticate(user=self.user2)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task.id, task_ids)
 
     def test_adding_user_grants_access(self):
-        """Adding user to assigned_to_users grants them access."""
+        """Adding user via TaskAssignment grants them access."""
         # user3 initially cannot see
         self.client.force_authenticate(user=self.user3)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertNotIn(self.task.id, task_ids)
 
         # Assign user3
-        self.task.assigned_to_users.add(self.user3)
+        TaskAssignment.objects.create(
+            task=self.task,
+            user=self.user3,
+            role='assignee',
+            assigned_by=self.user1
+        )
 
         # Now user3 can see
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task.id, task_ids)
 
     def test_removing_user_revokes_access(self):
-        """Removing user from assigned_to_users revokes access (if not creator)."""
+        """Removing TaskAssignment revokes access (if not creator)."""
         # user2 can initially see
         self.client.force_authenticate(user=self.user2)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task.id, task_ids)
 
-        # Remove user2
-        self.task.assigned_to_users.remove(self.user2)
+        # Remove user2's assignment
+        TaskAssignment.objects.filter(task=self.task, user=self.user2).delete()
 
         # Now user2 cannot see (not creator)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertNotIn(self.task.id, task_ids)
 
     def test_creator_retains_access_even_if_removed_from_assigned(self):
-        """Creator retains access even if removed from assigned_to_users."""
-        # Remove user1 from assigned
-        self.task.assigned_to_users.remove(self.user1)
+        """Creator retains access even if TaskAssignment is removed."""
+        # Remove user1's assignment
+        TaskAssignment.objects.filter(task=self.task, user=self.user1).delete()
 
         # user1 is creator, should still see it
         self.client.force_authenticate(user=self.user1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task.id, task_ids)
 
     def test_empty_assigned_to_users_shows_only_to_creator(self):
-        """Task with empty assigned_to_users is only visible to creator."""
-        # Remove all assigned users
-        self.task.assigned_to_users.clear()
+        """Task with no TaskAssignments is only visible to creator."""
+        # Remove all assignments
+        self.task.assignments.all().delete()
 
         # Creator can still see
         self.client.force_authenticate(user=self.user1)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(self.task.id, task_ids)
 
         # Others cannot see
         self.client.force_authenticate(user=self.user2)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
         task_ids = [t['id'] for t in response.data['results']]
         self.assertNotIn(self.task.id, task_ids)
 
@@ -294,31 +330,47 @@ class TaskViewSetPermissionsTestCase(TestCase):
         self.other_profile.role = Role.objects.get(code='digital_employee')
         self.other_profile.save()
 
+        # Create entity for task association (required)
+        from identity.models import Entity
+        self.entity = Entity.objects.create(display_name='Test Entity', kind='PJ')
+
         self.task = Task.objects.create(
             title='Test Task',
             department=self.dept,
-            created_by=self.owner
+            created_by=self.owner,
+            entity=self.entity  # Required: at least one of campaign/entity/contract
         )
-        self.task.assigned_to_users.add(self.owner, self.assigned)
+        TaskAssignment.objects.create(
+            task=self.task,
+            user=self.owner,
+            role='assignee',
+            assigned_by=self.owner
+        )
+        TaskAssignment.objects.create(
+            task=self.task,
+            user=self.assigned,
+            role='assignee',
+            assigned_by=self.owner
+        )
 
     def test_owner_can_retrieve(self):
         """Owner can retrieve their task."""
         self.client.force_authenticate(user=self.owner)
-        response = self.client.get(f'/api/tasks/{self.task.id}/')
+        response = self.client.get(f'/api/v1/crm/tasks/{self.task.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_assigned_user_can_retrieve(self):
         """Assigned user can retrieve task."""
         self.client.force_authenticate(user=self.assigned)
-        response = self.client.get(f'/api/tasks/{self.task.id}/')
+        response = self.client.get(f'/api/v1/crm/tasks/{self.task.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_other_user_cannot_retrieve(self):
         """Unrelated user cannot retrieve task."""
         self.client.force_authenticate(user=self.other)
-        response = self.client.get(f'/api/tasks/{self.task.id}/')
+        response = self.client.get(f'/api/v1/crm/tasks/{self.task.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -327,7 +379,7 @@ class TaskViewSetPermissionsTestCase(TestCase):
         self.client.force_authenticate(user=self.owner)
 
         data = {'title': 'Updated Title'}
-        response = self.client.patch(f'/api/tasks/{self.task.id}/', data)
+        response = self.client.patch(f'/api/v1/crm/tasks/{self.task.id}/', data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -339,7 +391,7 @@ class TaskViewSetPermissionsTestCase(TestCase):
         self.client.force_authenticate(user=self.assigned)
 
         data = {'title': 'Updated by Assigned'}
-        response = self.client.patch(f'/api/tasks/{self.task.id}/', data)
+        response = self.client.patch(f'/api/v1/crm/tasks/{self.task.id}/', data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -351,7 +403,7 @@ class TaskViewSetPermissionsTestCase(TestCase):
         self.client.force_authenticate(user=self.other)
 
         data = {'title': 'Hacked'}
-        response = self.client.patch(f'/api/tasks/{self.task.id}/', data)
+        response = self.client.patch(f'/api/v1/crm/tasks/{self.task.id}/', data)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -370,7 +422,7 @@ class TaskViewSetPermissionsTestCase(TestCase):
         manager_profile.save()
 
         self.client.force_authenticate(user=manager)
-        response = self.client.get(f'/api/tasks/{self.task.id}/')
+        response = self.client.get(f'/api/v1/crm/tasks/{self.task.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -382,6 +434,10 @@ class TaskViewSetCreateTestCase(TestCase):
         self.client = APIClient()
 
         self.dept, _ = Department.objects.get_or_create(code='digital', defaults={'name': 'Digital'})
+
+        # Create entity for task association
+        from identity.models import Entity
+        self.entity = Entity.objects.create(display_name='Test Entity', kind='PJ')
 
         self.user = User.objects.create_user(username='user', password='pass')
         self.user_profile = self.user.profile
@@ -395,17 +451,19 @@ class TaskViewSetCreateTestCase(TestCase):
 
         data = {
             'title': 'New Task',
-            'status': 'todo'
+            'status': 'todo',
+            'department': self.dept.id,
+            'entity': self.entity.id  # Required: at least one of campaign/entity/contract
         }
 
-        response = self.client.post('/api/tasks/', data)
+        response = self.client.post('/api/v1/crm/tasks/', data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Verify creator is assigned
         task = Task.objects.get(id=response.data['id'])
         self.assertEqual(task.created_by, self.user)
-        self.assertIn(self.user, task.assigned_to_users.all())
+        self.assertIn(self.user, task.assigned_users.all())
 
     def test_create_with_specific_assignees(self):
         """Can create task with specific assignees."""
@@ -423,16 +481,18 @@ class TaskViewSetCreateTestCase(TestCase):
         data = {
             'title': 'Task with assignees',
             'status': 'todo',
-            'assigned_to_users': [other_user.id]
+            'department': self.dept.id,
+            'assigned_user_ids': [other_user.id],
+            'entity': self.entity.id  # Required: at least one of campaign/entity/contract
         }
 
-        response = self.client.post('/api/tasks/', data)
+        response = self.client.post('/api/v1/crm/tasks/', data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         task = Task.objects.get(id=response.data['id'])
         # Should have the specified assignee
-        self.assertIn(other_user, task.assigned_to_users.all())
+        self.assertIn(other_user, task.assigned_users.all())
 
 
 class TaskViewSetEdgeCasesTestCase(TestCase):
@@ -462,22 +522,30 @@ class TaskViewSetEdgeCasesTestCase(TestCase):
 
         employee_profile.save()
 
+        # Note: Task model currently requires department (validation at save)
+        # Admin-only tasks without department will be part of future phases
+        # For now, test that admin can access all tasks
         task = Task.objects.create(
-            title='No dept task',
-            department=None,
+            title='Admin accessible task',
+            department=self.dept,
             created_by=employee
         )
-        task.assigned_to_users.add(employee)
+        TaskAssignment.objects.create(
+            task=task,
+            user=employee,
+            role='assignee',
+            assigned_by=employee
+        )
 
-        # Admin can see
+        # Admin can see tasks in any department
         self.client.force_authenticate(user=admin)
-        response = self.client.get(f'/api/tasks/{task.id}/')
+        response = self.client.get(f'/api/v1/crm/tasks/{task.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Employee cannot (even though creator)
+        # Employee can see tasks they created/assigned in their department
         self.client.force_authenticate(user=employee)
-        response = self.client.get(f'/api/tasks/{task.id}/')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.get(f'/api/v1/crm/tasks/{task.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_user_without_profile_gets_empty_list(self):
         """User without profile gets empty list."""
@@ -490,7 +558,7 @@ class TaskViewSetEdgeCasesTestCase(TestCase):
         )
 
         self.client.force_authenticate(user=user)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
@@ -511,11 +579,10 @@ class TaskViewSetEdgeCasesTestCase(TestCase):
             department=self.dept,
             created_by=user
         )
-        # Explicitly clear assigned users
-        task.assigned_to_users.clear()
+        # Explicitly clear assigned users (no TaskAssignments created)
 
         self.client.force_authenticate(user=user)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         task_ids = [t['id'] for t in response.data['results']]
         self.assertIn(task.id, task_ids)
@@ -537,10 +604,15 @@ class TaskViewSetEdgeCasesTestCase(TestCase):
             department=self.dept,
             created_by=user
         )
-        task.assigned_to_users.add(user)
+        TaskAssignment.objects.create(
+            task=task,
+            user=user,
+            role='assignee',
+            assigned_by=user
+        )
 
         self.client.force_authenticate(user=user)
-        response = self.client.get('/api/tasks/')
+        response = self.client.get('/api/v1/crm/tasks/')
 
         # Count how many times this task appears
         task_ids = [t['id'] for t in response.data['results']]

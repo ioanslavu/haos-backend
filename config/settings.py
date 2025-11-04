@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'catalog',
     'rights',
     'distribution',
+    'distributions',  # New: Long-term distribution deals feature
     'campaigns',
     'crm_extensions',
     'notifications',

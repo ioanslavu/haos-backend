@@ -127,9 +127,11 @@ class Task(models.Model):
         help_text="DEPRECATED: Use assigned_to_users instead"
     )
 
-    assigned_to_users = models.ManyToManyField(
+    # New: M2M through TaskAssignment (standard assignment pattern)
+    assigned_users = models.ManyToManyField(
         User,
-        blank=True,
+        through='TaskAssignment',
+        through_fields=('task', 'user'),  # Specify which FKs to use (task->user, not assigned_by)
         related_name='assigned_tasks',
         help_text="Users assigned to this task"
     )
@@ -309,6 +311,66 @@ class Task(models.Model):
     def is_blocked(self):
         """Check if task is blocked by other tasks"""
         return self.blocked_by.filter(status__in=['todo', 'in_progress', 'blocked']).exists()
+
+
+class TaskAssignment(models.Model):
+    """
+    Tracks which users are assigned to a task.
+    Supports multiple assignments with different roles.
+
+    Standard assignment pattern:
+    - Parent FK: related_name='assignments'
+    - User FK: field name='user'
+    - M2M lookup: 'assignments__user'
+    """
+
+    ROLE_CHOICES = [
+        ('assignee', 'Assignee'),      # Does the work
+        ('reviewer', 'Reviewer'),       # Reviews completion
+        ('observer', 'Observer'),       # Just watching
+    ]
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='task_assignments'
+    )
+
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='assignee',
+        help_text="Role of this user in the task"
+    )
+
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        help_text="User who created this assignment"
+    )
+
+    class Meta:
+        unique_together = ['task', 'user']
+        ordering = ['role', 'assigned_at']
+        indexes = [
+            models.Index(fields=['task', 'role']),
+            models.Index(fields=['user', 'role']),
+        ]
+        verbose_name = 'Task Assignment'
+        verbose_name_plural = 'Task Assignments'
+
+    def __str__(self):
+        return f"{self.user.email} - {self.task.title} ({self.get_role_display()})"
 
 
 class Activity(models.Model):

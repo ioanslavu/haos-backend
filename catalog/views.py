@@ -406,7 +406,7 @@ class RecordingViewSet(viewsets.ModelViewSet):
         else:
             # Employees see only campaigns they're assigned to
             campaigns = recording.campaigns.filter(
-                handlers__user=request.user
+                assignments__user=request.user
             ).distinct()
 
         # Serialize

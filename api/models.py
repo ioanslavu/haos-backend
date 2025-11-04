@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
+from django.db.models.deletion import ProtectedError
 from django.dispatch import receiver
 
 User = get_user_model()
@@ -284,6 +285,25 @@ def save_user_profile(sender, instance, **kwargs):
     """
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+
+@receiver(pre_delete, sender='api.UserProfile')
+def prevent_profile_deletion(sender, instance, **kwargs):
+    """
+    Prevent UserProfile deletion to avoid orphaned users.
+
+    User profiles should never be deleted directly. Instead:
+    - Deactivate the user: user.is_active = False
+    - Change role to guest: profile.role = guest_role
+    - Remove department: profile.department = None
+
+    This prevents "ghost" users and maintains data integrity.
+    """
+    raise ProtectedError(
+        "Cannot delete UserProfile. User profiles must not be deleted. "
+        "To deactivate a user, set user.is_active=False instead.",
+        {instance}
+    )
 
 
 class CompanySettings(models.Model):
