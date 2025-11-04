@@ -29,6 +29,20 @@ class DistributionAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at', 'track_count', 'total_revenue']
     inlines = [DistributionCatalogItemInline]
 
+    def track_count(self, obj):
+        """Return the count of catalog items for this distribution"""
+        return obj.catalog_items.count()
+    track_count.short_description = 'Track Count'
+
+    def total_revenue(self, obj):
+        """Return the total revenue across all catalog items for this distribution"""
+        from decimal import Decimal
+        total = Decimal('0.00')
+        for catalog_item in obj.catalog_items.all():
+            total += catalog_item.total_revenue
+        return f"{total} EUR"
+    total_revenue.short_description = 'Total Revenue'
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('entity', 'deal_type', 'deal_status', 'department')
