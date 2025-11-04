@@ -3,6 +3,97 @@
 from django.db import migrations
 
 
+def rename_or_create_indexes(apps, schema_editor):
+    """
+    Conditionally rename indexes if they exist, or create them if they don't.
+    This handles cases where production DB may not have the old indexes.
+    """
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+
+    with schema_editor.connection.cursor() as cursor:
+        # Handle role index
+        cursor.execute("""
+            DO $$
+            BEGIN
+                -- Check if old index exists
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = 'api_userpro_role_9579a2_idx'
+                ) THEN
+                    -- Rename old index
+                    ALTER INDEX api_userpro_role_9579a2_idx RENAME TO api_userpro_role_id_4a16d0_idx;
+                ELSE
+                    -- Create new index if old one doesn't exist
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_indexes
+                        WHERE indexname = 'api_userpro_role_id_4a16d0_idx'
+                    ) THEN
+                        CREATE INDEX api_userpro_role_id_4a16d0_idx ON api_userprofile (role_id);
+                    END IF;
+                END IF;
+            END $$;
+        """)
+
+        # Handle department index
+        cursor.execute("""
+            DO $$
+            BEGIN
+                -- Check if old index exists
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = 'api_userpro_departm_4dcd85_idx'
+                ) THEN
+                    -- Rename old index
+                    ALTER INDEX api_userpro_departm_4dcd85_idx RENAME TO api_userpro_departm_438aff_idx;
+                ELSE
+                    -- Create new index if old one doesn't exist
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_indexes
+                        WHERE indexname = 'api_userpro_departm_438aff_idx'
+                    ) THEN
+                        CREATE INDEX api_userpro_departm_438aff_idx ON api_userprofile (department_id);
+                    END IF;
+                END IF;
+            END $$;
+        """)
+
+
+def reverse_rename_or_drop_indexes(apps, schema_editor):
+    """
+    Reverse operation: rename back or drop the indexes
+    """
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+
+    with schema_editor.connection.cursor() as cursor:
+        # Reverse role index
+        cursor.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = 'api_userpro_role_id_4a16d0_idx'
+                ) THEN
+                    ALTER INDEX api_userpro_role_id_4a16d0_idx RENAME TO api_userpro_role_9579a2_idx;
+                END IF;
+            END $$;
+        """)
+
+        # Reverse department index
+        cursor.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = 'api_userpro_departm_438aff_idx'
+                ) THEN
+                    ALTER INDEX api_userpro_departm_438aff_idx RENAME TO api_userpro_departm_4dcd85_idx;
+                END IF;
+            END $$;
+        """)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,14 +101,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_role_id_4a16d0_idx',
-            old_name='api_userpro_role_9579a2_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_departm_438aff_idx',
-            old_name='api_userpro_departm_4dcd85_idx',
+        migrations.RunPython(
+            rename_or_create_indexes,
+            reverse_rename_or_drop_indexes,
         ),
     ]
