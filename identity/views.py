@@ -11,15 +11,15 @@ from django.db.models import Q, Count
 from .models import (
     Entity, EntityRole, SensitiveIdentity, Identifier, AuditLogSensitive,
     SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone,
-    ClientProfile, ClientProfileHistory
+    DepartmentEntity, EntityScore, EntityScoreHistory
 )
 from .serializers import (
     EntityListSerializer, EntityDetailSerializer, EntityCreateUpdateSerializer,
     EntityRoleSerializer, IdentifierSerializer, SensitiveIdentitySerializer,
     SensitiveIdentityRevealSerializer, AuditLogSensitiveSerializer,
     ClientCompatibilitySerializer, SocialMediaAccountSerializer,
-    ContactPersonSerializer, ClientProfileSerializer,
-    ClientProfileCreateUpdateSerializer, ClientProfileHistorySerializer
+    ContactPersonSerializer, EntityScoreSerializer,
+    EntityScoreCreateUpdateSerializer, EntityScoreHistorySerializer
 )
 
 
@@ -105,15 +105,32 @@ class EntityViewSet(GlobalResourceViewSet):
 
     def get_queryset(self):
         """
-        Get queryset with prefetch optimization.
+        Get queryset with department filtering.
 
-        Parent handles RBAC (currently global access for all authenticated users).
-        This adds action-specific prefetching.
+        Department users see:
+        1. Entities in their department's active list (via DepartmentEntity)
+        2. All entities with internal roles (is_internal=True)
+
+        Admins see all entities globally.
         """
-        queryset = super().get_queryset()
-        # Parent already applies prefetch_related_fields
-        # No additional optimization needed
-        return queryset
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+
+        # Admins see everything
+        if profile and profile.is_admin:
+            return super().get_queryset()
+
+        # Regular users: department entities + internal entities
+        if profile and profile.department:
+            queryset = Entity.objects.filter(
+                Q(department_memberships__department=profile.department,
+                  department_memberships__is_active=True) |
+                Q(entity_roles__is_internal=True)
+            ).distinct()
+            return queryset
+
+        # No department = no entities (safety fallback)
+        return Entity.objects.none()
 
     @action(detail=True, methods=['get'])
     def placeholders(self, request, pk=None):
@@ -124,10 +141,12 @@ class EntityViewSet(GlobalResourceViewSet):
 
     @action(detail=False, methods=['get'])
     def artists(self, request):
-        """Get all entities with artist role."""
+        """Get all entities with artist role. Applies search filters."""
         queryset = self.get_queryset().filter(
             entity_roles__role='artist'
         ).distinct()
+        # Apply all filters including search
+        queryset = self.filter_queryset(queryset)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = EntityListSerializer(page, many=True)
@@ -137,10 +156,12 @@ class EntityViewSet(GlobalResourceViewSet):
 
     @action(detail=False, methods=['get'])
     def writers(self, request):
-        """Get all entities with writer role."""
+        """Get all entities with writer role. Applies search filters."""
         queryset = self.get_queryset().filter(
             entity_roles__role='writer'
         ).distinct()
+        # Apply all filters including search
+        queryset = self.filter_queryset(queryset)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = EntityListSerializer(page, many=True)
@@ -150,10 +171,12 @@ class EntityViewSet(GlobalResourceViewSet):
 
     @action(detail=False, methods=['get'])
     def producers(self, request):
-        """Get all entities with producer role."""
+        """Get all entities with producer role. Applies search filters."""
         queryset = self.get_queryset().filter(
             entity_roles__role='producer'
         ).distinct()
+        # Apply all filters including search
+        queryset = self.filter_queryset(queryset)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = EntityListSerializer(page, many=True)
@@ -169,6 +192,8 @@ class EntityViewSet(GlobalResourceViewSet):
 
         Business roles include: client, brand, label, booking, endorsements,
         publishing, productie, new_business, digital.
+
+        Applies department filtering and search filters.
         """
         business_roles = [
             'client', 'brand', 'label', 'booking', 'endorsements',
@@ -177,6 +202,10 @@ class EntityViewSet(GlobalResourceViewSet):
         queryset = self.get_queryset().filter(
             entity_roles__role__in=business_roles
         ).distinct()
+
+        # Apply all filters including search
+        queryset = self.filter_queryset(queryset)
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = EntityListSerializer(page, many=True)
@@ -375,6 +404,97 @@ class EntityViewSet(GlobalResourceViewSet):
             'contract_title': latest_contract.title,
             'shares': serializer.data
         })
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def search_global(self, request):
+        """
+        Global fuzzy search across ALL entities (ignoring department scope).
+        Used in 'Add Entity' modal to prevent duplicate creation.
+
+        Returns both exact and fuzzy matches with similarity scores using PostgreSQL trigram.
+
+        Query params:
+        - q: Search query (min 2 characters)
+        """
+        from django.contrib.postgres.search import TrigramSimilarity
+
+        query = request.query_params.get('q', '').strip()
+
+        if len(query) < 2:
+            return Response([])
+
+        # Search ALL entities (bypass department filtering)
+        results = Entity.objects.annotate(
+            similarity=TrigramSimilarity('display_name', query)
+        ).filter(
+            Q(display_name__iexact=query) |  # Exact match
+            Q(similarity__gt=0.3)  # Fuzzy match (30% similarity threshold)
+        ).order_by('-similarity')[:20]
+
+        serializer = EntityListSerializer(results, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def add_to_my_department(self, request, pk=None):
+        """
+        Add this entity to the current user's department active list.
+        Creates DepartmentEntity junction record.
+
+        Returns:
+        - status: 'added', 'already_added', or 'reactivated'
+        """
+        entity = self.get_object()
+        user = request.user
+        profile = getattr(user, 'profile', None)
+
+        if not profile or not profile.department:
+            return Response(
+                {'error': 'You are not assigned to a department'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if entity has internal role (already visible to all)
+        has_internal_role = entity.entity_roles.filter(is_internal=True).exists()
+        if has_internal_role:
+            return Response({
+                'status': 'already_visible',
+                'message': 'This entity has internal roles and is already visible to all departments'
+            })
+
+        dept_entity, created = DepartmentEntity.objects.get_or_create(
+            entity=entity,
+            department=profile.department,
+            defaults={'added_by': user, 'is_active': True}
+        )
+
+        if not created:
+            if not dept_entity.is_active:
+                dept_entity.is_active = True
+                dept_entity.save()
+                return Response({'status': 'reactivated'})
+            return Response({'status': 'already_added'})
+
+        return Response({'status': 'added'}, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        """
+        Create entity and automatically add to creator's department.
+        """
+        user = self.request.user
+        entity = serializer.save(created_by=user)
+
+        # Automatically add new entity to creator's department (if they have one)
+        profile = getattr(user, 'profile', None)
+        if profile and profile.department:
+            # Don't add to department if entity has internal roles (already visible to all)
+            has_internal_role = entity.entity_roles.filter(is_internal=True).exists()
+            if not has_internal_role:
+                DepartmentEntity.objects.create(
+                    entity=entity,
+                    department=profile.department,
+                    added_by=user,
+                    is_active=True
+                )
 
 
 class SensitiveIdentityViewSet(viewsets.ModelViewSet):
@@ -635,8 +755,8 @@ class ContactPersonViewSet(viewsets.ModelViewSet):
         return super().get_queryset().prefetch_related('emails', 'phones').select_related('entity')
 
 
-class ClientProfileFilter(django_filters.FilterSet):
-    """Filter for ClientProfile model."""
+class EntityScoreFilter(django_filters.FilterSet):
+    """Filter for EntityScore model."""
 
     entity = django_filters.NumberFilter()
     department = django_filters.NumberFilter()
@@ -644,25 +764,25 @@ class ClientProfileFilter(django_filters.FilterSet):
     max_health_score = django_filters.NumberFilter(field_name='health_score', lookup_expr='lte')
 
     class Meta:
-        model = ClientProfile
+        model = EntityScore
         fields = ['entity', 'department']
 
 
-class ClientProfileViewSet(DepartmentScopedViewSet):
+class EntityScoreViewSet(DepartmentScopedViewSet):
     """
-    ViewSet for ClientProfile model with RBAC.
+    ViewSet for EntityScore model with RBAC.
 
     Inherits from DepartmentScopedViewSet which provides automatic RBAC filtering:
-    - Admins: See all client profiles across all departments
-    - Department users: See only profiles for their department
+    - Admins: See all entity scores across all departments
+    - Department users: See only scores for their department
 
-    No ownership restrictions - profiles are shared within the department.
+    No ownership restrictions - scores are shared within the department.
     No hardcoded role checks!
     """
 
-    queryset = ClientProfile.objects.all()
+    queryset = EntityScore.objects.all()
     permission_classes = [IsAuthenticated, IsNotGuest]
-    filterset_class = ClientProfileFilter
+    filterset_class = EntityScoreFilter
     filter_backends = [
         django_filters.DjangoFilterBackend,
         filters.OrderingFilter
@@ -677,14 +797,14 @@ class ClientProfileViewSet(DepartmentScopedViewSet):
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action in ['create', 'update', 'partial_update']:
-            return ClientProfileCreateUpdateSerializer
-        return ClientProfileSerializer
+            return EntityScoreCreateUpdateSerializer
+        return EntityScoreSerializer
 
     @action(detail=False, methods=['get'])
     def by_entity(self, request):
         """
-        Get client profile for a specific entity in user's department.
-        For admins, returns all department profiles for that entity.
+        Get entity score for a specific entity in user's department.
+        For admins, returns all department scores for that entity.
         """
         entity_id = request.query_params.get('entity_id')
         if not entity_id:
@@ -699,16 +819,16 @@ class ClientProfileViewSet(DepartmentScopedViewSet):
 
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
-        """Get full history for a client profile."""
-        profile = self.get_object()
-        history = profile.history.order_by('-changed_at')
+        """Get full history for an entity score."""
+        score = self.get_object()
+        history = score.history.order_by('-changed_at')
 
         page = self.paginate_queryset(history)
         if page is not None:
-            serializer = ClientProfileHistorySerializer(page, many=True)
+            serializer = EntityScoreHistorySerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = ClientProfileHistorySerializer(history, many=True)
+        serializer = EntityScoreHistorySerializer(history, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
@@ -771,14 +891,14 @@ class ClientProfileViewSet(DepartmentScopedViewSet):
         return Response(stats)
 
 
-class ClientProfileHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+class EntityScoreHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    Read-only ViewSet for ClientProfileHistory.
-    Users can only see history for profiles in their department.
+    Read-only ViewSet for EntityScoreHistory.
+    Users can only see history for scores in their department.
     """
 
-    queryset = ClientProfileHistory.objects.all()
-    serializer_class = ClientProfileHistorySerializer
+    queryset = EntityScoreHistory.objects.all()
+    serializer_class = EntityScoreHistorySerializer
     permission_classes = [IsAuthenticated, IsNotGuest]
     filter_backends = [
         django_filters.DjangoFilterBackend,

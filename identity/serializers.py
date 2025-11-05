@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     Entity, EntityRole, SensitiveIdentity, Identifier, AuditLogSensitive,
     SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone,
-    ClientProfile, ClientProfileHistory
+    DepartmentEntity, EntityScore, EntityScoreHistory
 )
 
 User = get_user_model()
@@ -181,6 +181,7 @@ class EntityListSerializer(serializers.ModelSerializer):
     """Light serializer for Entity listing."""
 
     roles = serializers.SerializerMethodField()
+    has_internal_role = serializers.SerializerMethodField()
     kind_display = serializers.CharField(source='get_kind_display', read_only=True)
     profile_photo = serializers.ImageField(read_only=True)
 
@@ -188,13 +189,18 @@ class EntityListSerializer(serializers.ModelSerializer):
         model = Entity
         fields = [
             'id', 'kind', 'kind_display', 'display_name', 'alias_name', 'first_name', 'last_name',
-            'stage_name', 'nationality', 'gender', 'email', 'phone', 'profile_photo', 'roles', 'created_at'
+            'stage_name', 'nationality', 'gender', 'email', 'phone', 'profile_photo', 'roles',
+            'has_internal_role', 'created_at'
         ]
         read_only_fields = ['created_at']
 
     def get_roles(self, obj):
         """Return list of role names."""
         return [role.get_role_display() for role in obj.entity_roles.all()]
+
+    def get_has_internal_role(self, obj):
+        """Check if entity has any internal roles."""
+        return obj.entity_roles.filter(is_internal=True).exists()
 
 
 class EntityDetailSerializer(serializers.ModelSerializer):
@@ -601,16 +607,16 @@ class ClientCompatibilitySerializer(serializers.ModelSerializer):
         return obj.get_placeholders()
 
 
-class ClientProfileHistorySerializer(serializers.ModelSerializer):
-    """Serializer for ClientProfileHistory."""
+class EntityScoreHistorySerializer(serializers.ModelSerializer):
+    """Serializer for EntityScoreHistory."""
 
     changed_by_name = serializers.SerializerMethodField()
     score_change = serializers.SerializerMethodField()
 
     class Meta:
-        model = ClientProfileHistory
+        model = EntityScoreHistory
         fields = [
-            'id', 'client_profile', 'health_score',
+            'id', 'entity_score', 'health_score',
             'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
             'notes', 'changed_by', 'changed_by_name', 'change_reason',
             'changed_at', 'score_change'
@@ -628,8 +634,8 @@ class ClientProfileHistorySerializer(serializers.ModelSerializer):
         return obj.get_score_change()
 
 
-class ClientProfileSerializer(serializers.ModelSerializer):
-    """Serializer for ClientProfile with trend and history."""
+class EntityScoreSerializer(serializers.ModelSerializer):
+    """Serializer for EntityScore with trend and history."""
 
     entity_name = serializers.CharField(source='entity.display_name', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
@@ -638,7 +644,7 @@ class ClientProfileSerializer(serializers.ModelSerializer):
     recent_history = serializers.SerializerMethodField()
 
     class Meta:
-        model = ClientProfile
+        model = EntityScore
         fields = [
             'id', 'entity', 'entity_name', 'department', 'department_name',
             'health_score', 'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
@@ -660,14 +666,14 @@ class ClientProfileSerializer(serializers.ModelSerializer):
     def get_recent_history(self, obj):
         """Return last 5 history entries."""
         history = obj.history.order_by('-changed_at')[:5]
-        return ClientProfileHistorySerializer(history, many=True).data
+        return EntityScoreHistorySerializer(history, many=True).data
 
 
-class ClientProfileCreateUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for creating and updating ClientProfile."""
+class EntityScoreCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating EntityScore."""
 
     class Meta:
-        model = ClientProfile
+        model = EntityScore
         fields = [
             'id', 'entity', 'department', 'health_score',
             'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
@@ -676,7 +682,7 @@ class ClientProfileCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate(self, data):
-        """Validate ClientProfile data."""
+        """Validate EntityScore data."""
         # Ensure scores are within range (1-10) - this is also validated by model
         for field in ['health_score', 'collaboration_frequency_score', 'feedback_score', 'payment_latency_score']:
             if field in data and data[field] is not None:
@@ -685,7 +691,7 @@ class ClientProfileCreateUpdateSerializer(serializers.ModelSerializer):
                         field: f"{field} must be between 1 and 10"
                     })
 
-        # For non-admins, ensure they can only create/update profiles for their own department
+        # For non-admins, ensure they can only create/update scores for their own department
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             user = request.user
@@ -695,13 +701,13 @@ class ClientProfileCreateUpdateSerializer(serializers.ModelSerializer):
                 # Non-admins can only work with their own department
                 if 'department' in data and data['department'] != profile.department:
                     raise serializers.ValidationError({
-                        'department': "You can only manage client profiles for your own department"
+                        'department': "You can only manage entity scores for your own department"
                     })
 
         return data
 
     def create(self, validated_data):
-        """Create ClientProfile and set updated_by."""
+        """Create EntityScore and set updated_by."""
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             validated_data['updated_by'] = request.user
@@ -709,7 +715,7 @@ class ClientProfileCreateUpdateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        """Update ClientProfile and set updated_by."""
+        """Update EntityScore and set updated_by."""
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             validated_data['updated_by'] = request.user

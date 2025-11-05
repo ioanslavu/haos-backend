@@ -1310,25 +1310,82 @@ class ContactPhone(models.Model):
         return self.phone
 
 
-class ClientProfile(models.Model):
+class DepartmentEntity(models.Model):
     """
-    Department-specific client health and reliability profile.
-    Each department maintains their own view of client health.
-    Based on collaboration frequency, feedback quality, and payment latency.
+    Junction table: which entities are active/visible for which departments.
+    An entity can belong to multiple departments.
+    Entities with is_internal=True roles are visible to all departments.
     """
 
     entity = models.ForeignKey(
         Entity,
         on_delete=models.CASCADE,
-        related_name='client_profiles',
-        help_text="The client entity this profile belongs to"
+        related_name='department_memberships',
+        help_text="The entity that belongs to this department"
     )
 
     department = models.ForeignKey(
         'api.Department',
         on_delete=models.CASCADE,
-        related_name='client_profiles',
-        help_text="The department this profile belongs to"
+        related_name='active_entities',
+        help_text="The department this entity belongs to"
+    )
+
+    # Tracking
+    added_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='entities_added',
+        help_text="User who added this entity to the department"
+    )
+
+    added_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this entity was added to the department"
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Soft delete: hide entity from department without removing the record"
+    )
+
+    class Meta:
+        unique_together = ['entity', 'department']
+        ordering = ['-added_at']
+        indexes = [
+            models.Index(fields=['department', 'is_active']),
+            models.Index(fields=['entity', 'department']),
+        ]
+        verbose_name = "Department Entity"
+        verbose_name_plural = "Department Entities"
+
+    def __str__(self):
+        return f"{self.entity.display_name} → {self.department.name}"
+
+
+class EntityScore(models.Model):
+    """
+    Department-specific entity health and reliability scoring.
+    Each department maintains their own view of entity collaboration health.
+    Based on collaboration frequency, feedback quality, and payment latency.
+    Separate from entity visibility (see DepartmentEntity).
+    Created only when users add scoring data.
+    """
+
+    entity = models.ForeignKey(
+        Entity,
+        on_delete=models.CASCADE,
+        related_name='health_scores',
+        help_text="The entity this score belongs to"
+    )
+
+    department = models.ForeignKey(
+        'api.Department',
+        on_delete=models.CASCADE,
+        related_name='entity_scores',
+        help_text="The department this score belongs to"
     )
 
     # Overall health score (1-10)
@@ -1373,8 +1430,8 @@ class ClientProfile(models.Model):
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='client_profiles_updated',
-        help_text="Last user who updated this profile"
+        related_name='entity_scores_updated',
+        help_text="Last user who updated this score"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1388,8 +1445,8 @@ class ClientProfile(models.Model):
             models.Index(fields=['department', 'health_score']),
             models.Index(fields=['health_score']),
         ]
-        verbose_name = "Client Profile"
-        verbose_name_plural = "Client Profiles"
+        verbose_name = "Entity Score"
+        verbose_name_plural = "Entity Scores"
 
     def __str__(self):
         score_text = f"{self.health_score}/10" if self.health_score else "No score"
@@ -1421,7 +1478,7 @@ class ClientProfile(models.Model):
         if is_update:
             # Get the old values before saving
             try:
-                old_instance = ClientProfile.objects.get(pk=self.pk)
+                old_instance = EntityScore.objects.get(pk=self.pk)
                 # Check if any score changed
                 if (old_instance.health_score != self.health_score or
                     old_instance.collaboration_frequency_score != self.collaboration_frequency_score or
@@ -1433,8 +1490,8 @@ class ClientProfile(models.Model):
                     super().save(*args, **kwargs)
 
                     # Create history entry
-                    ClientProfileHistory.objects.create(
-                        client_profile=self,
+                    EntityScoreHistory.objects.create(
+                        entity_score=self,
                         health_score=self.health_score,
                         collaboration_frequency_score=self.collaboration_frequency_score,
                         feedback_score=self.feedback_score,
@@ -1443,24 +1500,24 @@ class ClientProfile(models.Model):
                         changed_by=self.updated_by
                     )
                     return
-            except ClientProfile.DoesNotExist:
+            except EntityScore.DoesNotExist:
                 pass
 
         # Normal save
         super().save(*args, **kwargs)
 
 
-class ClientProfileHistory(models.Model):
+class EntityScoreHistory(models.Model):
     """
-    History of changes to client profiles.
-    Tracks all modifications to see improvements or degradations in client relationships.
+    History of changes to entity scores.
+    Tracks all modifications to see improvements or degradations in entity relationships.
     """
 
-    client_profile = models.ForeignKey(
-        ClientProfile,
+    entity_score = models.ForeignKey(
+        EntityScore,
         on_delete=models.CASCADE,
         related_name='history',
-        help_text="The client profile this history entry belongs to"
+        help_text="The entity score this history entry belongs to"
     )
 
     # Score snapshots at this point in time
@@ -1502,7 +1559,7 @@ class ClientProfileHistory(models.Model):
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='client_profile_changes',
+        related_name='entity_score_changes',
         help_text="User who made this change"
     )
 
@@ -1517,23 +1574,23 @@ class ClientProfileHistory(models.Model):
     class Meta:
         ordering = ['-changed_at']
         indexes = [
-            models.Index(fields=['client_profile', '-changed_at']),
+            models.Index(fields=['entity_score', '-changed_at']),
             models.Index(fields=['changed_by', '-changed_at']),
         ]
-        verbose_name = "Client Profile History"
-        verbose_name_plural = "Client Profile Histories"
+        verbose_name = "Entity Score History"
+        verbose_name_plural = "Entity Score Histories"
 
     def __str__(self):
         score_text = f"{self.health_score}/10" if self.health_score else "No score"
-        return f"{self.client_profile.entity.display_name} - {score_text} at {self.changed_at}"
+        return f"{self.entity_score.entity.display_name} - {score_text} at {self.changed_at}"
 
     def get_score_change(self):
         """
         Calculate the score change from the previous history entry.
         Returns: positive/negative integer or None
         """
-        previous = ClientProfileHistory.objects.filter(
-            client_profile=self.client_profile,
+        previous = EntityScoreHistory.objects.filter(
+            entity_score=self.entity_score,
             changed_at__lt=self.changed_at
         ).order_by('-changed_at').first()
 

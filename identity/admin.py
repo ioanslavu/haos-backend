@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     Entity, EntityRole, SensitiveIdentity, Identifier, AuditLogSensitive,
-    SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone
+    SocialMediaAccount, ContactPerson, ContactEmail, ContactPhone,
+    DepartmentEntity, EntityScore, EntityScoreHistory
 )
 
 
@@ -255,3 +256,107 @@ class ContactPersonAdmin(admin.ModelAdmin):
     )
 
     inlines = [ContactEmailInline, ContactPhoneInline]
+
+
+@admin.register(DepartmentEntity)
+class DepartmentEntityAdmin(admin.ModelAdmin):
+    list_display = ['entity', 'department', 'is_active', 'added_by', 'added_at']
+    list_filter = ['department', 'is_active', 'added_at']
+    search_fields = ['entity__display_name', 'department__name']
+    readonly_fields = ['added_at']
+    autocomplete_fields = ['entity']
+
+    fieldsets = (
+        ('Relationship', {
+            'fields': ('entity', 'department', 'is_active')
+        }),
+        ('Tracking', {
+            'fields': ('added_by', 'added_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+class EntityScoreHistoryInline(admin.TabularInline):
+    model = EntityScoreHistory
+    extra = 0
+    readonly_fields = ['health_score', 'collaboration_frequency_score', 'feedback_score',
+                       'payment_latency_score', 'notes', 'changed_by', 'changed_at']
+    can_delete = False
+    max_num = 5  # Show last 5 changes
+    ordering = ['-changed_at']
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(EntityScore)
+class EntityScoreAdmin(admin.ModelAdmin):
+    list_display = ['entity', 'department', 'health_score', 'get_trend', 'updated_at']
+    list_filter = ['department', 'health_score', 'updated_at']
+    search_fields = ['entity__display_name', 'department__name', 'notes']
+    readonly_fields = ['created_at', 'updated_at', 'get_trend']
+    autocomplete_fields = ['entity', 'updated_by']
+
+    fieldsets = (
+        ('Entity & Department', {
+            'fields': ('entity', 'department')
+        }),
+        ('Health Scores', {
+            'fields': ('health_score', 'collaboration_frequency_score',
+                      'feedback_score', 'payment_latency_score')
+        }),
+        ('Notes & Tracking', {
+            'fields': ('notes', 'updated_by', 'created_at', 'updated_at', 'get_trend'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    inlines = [EntityScoreHistoryInline]
+
+    def get_trend(self, obj):
+        trend = obj.get_score_trend()
+        icons = {'up': '📈', 'down': '📉', 'stable': '➡️'}
+        return format_html('<span>{} {}</span>', icons.get(trend, ''), trend.capitalize())
+    get_trend.short_description = 'Trend'
+
+
+@admin.register(EntityScoreHistory)
+class EntityScoreHistoryAdmin(admin.ModelAdmin):
+    list_display = ['entity_score', 'health_score', 'changed_by', 'changed_at', 'get_change']
+    list_filter = ['changed_at', 'changed_by']
+    search_fields = ['entity_score__entity__display_name', 'notes']
+    readonly_fields = ['entity_score', 'health_score', 'collaboration_frequency_score',
+                       'feedback_score', 'payment_latency_score', 'notes',
+                       'changed_by', 'changed_at', 'get_change']
+    date_hierarchy = 'changed_at'
+
+    fieldsets = (
+        ('Score Information', {
+            'fields': ('entity_score', 'health_score', 'collaboration_frequency_score',
+                      'feedback_score', 'payment_latency_score')
+        }),
+        ('Change Information', {
+            'fields': ('notes', 'change_reason', 'changed_by', 'changed_at', 'get_change')
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def get_change(self, obj):
+        change = obj.get_score_change()
+        if change is None:
+            return '—'
+        elif change > 0:
+            return format_html('<span style="color: green;">+{}</span>', change)
+        elif change < 0:
+            return format_html('<span style="color: red;">{}</span>', change)
+        return '0'
+    get_change.short_description = 'Score Change'
