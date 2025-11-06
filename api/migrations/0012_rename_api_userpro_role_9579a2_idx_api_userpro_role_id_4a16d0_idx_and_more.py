@@ -3,6 +3,74 @@
 from django.db import migrations
 
 
+def ensure_indexes_exist(apps, schema_editor):
+    """
+    Safely ensure indexes exist with correct names.
+    This is a duplicate of migration 0011 - migration 0011 already renamed these indexes.
+    We make this safe by checking if indexes already have the new names (they should).
+    If old names exist, rename them. If new names already exist, do nothing.
+    """
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+
+    with schema_editor.connection.cursor() as cursor:
+        # Handle role index - should already be renamed by 0011
+        cursor.execute("""
+            DO $$
+            BEGIN
+                -- Check if old index exists (shouldn't, 0011 renamed it)
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = 'api_userpro_role_9579a2_idx'
+                ) THEN
+                    -- Rename old index
+                    ALTER INDEX api_userpro_role_9579a2_idx RENAME TO api_userpro_role_id_4a16d0_idx;
+                ELSE
+                    -- Check if new index exists (it should from 0011)
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_indexes
+                        WHERE indexname = 'api_userpro_role_id_4a16d0_idx'
+                    ) THEN
+                        -- Create new index if neither old nor new exists
+                        CREATE INDEX api_userpro_role_id_4a16d0_idx ON api_userprofile (role_id);
+                    END IF;
+                END IF;
+            END $$;
+        """)
+
+        # Handle department index - should already be renamed by 0011
+        cursor.execute("""
+            DO $$
+            BEGIN
+                -- Check if old index exists (shouldn't, 0011 renamed it)
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = 'api_userpro_departm_4dcd85_idx'
+                ) THEN
+                    -- Rename old index
+                    ALTER INDEX api_userpro_departm_4dcd85_idx RENAME TO api_userpro_departm_438aff_idx;
+                ELSE
+                    -- Check if new index exists (it should from 0011)
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_indexes
+                        WHERE indexname = 'api_userpro_departm_438aff_idx'
+                    ) THEN
+                        -- Create new index if neither old nor new exists
+                        CREATE INDEX api_userpro_departm_438aff_idx ON api_userprofile (department_id);
+                    END IF;
+                END IF;
+            END $$;
+        """)
+
+
+def reverse_noop(apps, schema_editor):
+    """
+    Reverse operation is a no-op since this migration is idempotent.
+    Migration 0011 handles the actual reversals.
+    """
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,14 +78,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_role_id_4a16d0_idx',
-            old_name='api_userpro_role_9579a2_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='userprofile',
-            new_name='api_userpro_departm_438aff_idx',
-            old_name='api_userpro_departm_4dcd85_idx',
+        migrations.RunPython(
+            ensure_indexes_exist,
+            reverse_noop,
         ),
     ]
