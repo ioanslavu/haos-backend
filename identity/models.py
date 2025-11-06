@@ -86,6 +86,25 @@ class Entity(models.Model):
         help_text="Gender (for Physical Persons)"
     )
 
+    # Artist sales-specific fields
+    rate_tier = models.CharField(
+        max_length=1,
+        choices=[
+            ('A', 'A-Tier'),
+            ('B', 'B-Tier'),
+            ('C', 'C-Tier'),
+        ],
+        blank=True,
+        null=True,
+        help_text="Artist rate tier for image rights deals (A/B/C)"
+    )
+
+    exclusivities_active = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Active exclusivities for artist (e.g., [{brand: 'X', category: 'Beverage', until: '2025-12-31'}])"
+    )
+
     # Profile photo
     profile_photo = models.ImageField(
         upload_to='entity_photos/',
@@ -176,6 +195,26 @@ class Entity(models.Model):
         blank=True,
         null=True,
         help_text="VAT number (for PJ)"
+    )
+
+    # Brand/Agency-specific fields (for artist sales)
+    holding = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Parent company or holding group (e.g., WPP, Publicis)"
+    )
+
+    billing_address = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Billing address (separate from physical address)"
+    )
+
+    billing_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Email address for billing/invoices"
     )
 
     # Metadata

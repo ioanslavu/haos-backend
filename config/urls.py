@@ -93,6 +93,9 @@ urlpatterns = [
     # CRM Extensions API (Tasks, Activities, Metrics)
     path('api/v1/crm/', include('crm_extensions.urls')),
 
+    # Artist Sales API (Image Rights & Brand Deals)
+    path('api/v1/artist-sales/', include('artist_sales.urls')),
+
     # Notifications API
     path('api/v1/', include('notifications.urls')),
 ]

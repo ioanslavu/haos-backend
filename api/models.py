@@ -208,6 +208,12 @@ class DepartmentRequest(models.Model):
         choices=[
             ('digital', 'Digital'),
             ('sales', 'Sales'),
+            ('legal', 'Legal'),
+            ('publishing', 'Publishing'),
+            ('label', 'Label'),
+            ('marketing', 'Marketing'),
+            ('finance', 'Finance'),
+            ('special_operations', 'Special Operations'),
         ],
         db_index=True,
         help_text="Requested department"

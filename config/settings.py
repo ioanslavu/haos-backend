@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'distributions',  # New: Long-term distribution deals feature
     'campaigns',
     'crm_extensions',
+    'artist_sales',  # New: Artist Sales & Image Rights CRM
     'notifications',
 ]
 

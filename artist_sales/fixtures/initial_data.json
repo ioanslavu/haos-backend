@@ -1,0 +1,488 @@
+[
+  {
+    "model": "artist_sales.deliverablepack",
+    "pk": 1,
+    "fields": {
+      "name": "Standard Social Media Package",
+      "description": "Standard social media package including Instagram and TikTok posts",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 1,
+    "fields": {
+      "pack": 1,
+      "deliverable_type": "ig_post",
+      "quantity": 3,
+      "description": "3x Instagram feed posts",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 2,
+    "fields": {
+      "pack": 1,
+      "deliverable_type": "ig_story",
+      "quantity": 5,
+      "description": "5x Instagram stories",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 3,
+    "fields": {
+      "pack": 1,
+      "deliverable_type": "tiktok_video",
+      "quantity": 2,
+      "description": "2x TikTok videos",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepack",
+    "pk": 2,
+    "fields": {
+      "name": "Premium Digital Bundle",
+      "description": "Comprehensive digital package with social media and YouTube content",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 4,
+    "fields": {
+      "pack": 2,
+      "deliverable_type": "ig_post",
+      "quantity": 5,
+      "description": "5x Instagram feed posts",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 5,
+    "fields": {
+      "pack": 2,
+      "deliverable_type": "ig_reel",
+      "quantity": 3,
+      "description": "3x Instagram Reels",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 6,
+    "fields": {
+      "pack": 2,
+      "deliverable_type": "tiktok_video",
+      "quantity": 4,
+      "description": "4x TikTok videos",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 7,
+    "fields": {
+      "pack": 2,
+      "deliverable_type": "youtube_video",
+      "quantity": 1,
+      "description": "1x YouTube integration video",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepack",
+    "pk": 3,
+    "fields": {
+      "name": "TVC + Digital Package",
+      "description": "TV Commercial with digital rights and social media support",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 8,
+    "fields": {
+      "pack": 3,
+      "deliverable_type": "tvc",
+      "quantity": 1,
+      "description": "1x TV Commercial (30 seconds)",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 9,
+    "fields": {
+      "pack": 3,
+      "deliverable_type": "ig_post",
+      "quantity": 2,
+      "description": "2x Instagram posts featuring TVC content",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 10,
+    "fields": {
+      "pack": 3,
+      "deliverable_type": "digital_banner",
+      "quantity": 3,
+      "description": "3x Digital banner variations",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepack",
+    "pk": 4,
+    "fields": {
+      "name": "Event & Activation Package",
+      "description": "Event appearance with social media coverage",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 11,
+    "fields": {
+      "pack": 4,
+      "deliverable_type": "event",
+      "quantity": 1,
+      "description": "1x Event appearance (2-4 hours)",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 12,
+    "fields": {
+      "pack": 4,
+      "deliverable_type": "ig_post",
+      "quantity": 3,
+      "description": "3x Instagram posts from the event",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 13,
+    "fields": {
+      "pack": 4,
+      "deliverable_type": "ig_story",
+      "quantity": 10,
+      "description": "10x Instagram stories from the event",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepack",
+    "pk": 5,
+    "fields": {
+      "name": "ATL Campaign Package",
+      "description": "Above-the-line campaign including TVC, print, and OOH",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 14,
+    "fields": {
+      "pack": 5,
+      "deliverable_type": "tvc",
+      "quantity": 2,
+      "description": "2x TV Commercials (30s and 15s versions)",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 15,
+    "fields": {
+      "pack": 5,
+      "deliverable_type": "print_ad",
+      "quantity": 3,
+      "description": "3x Print advertisements",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.deliverablepackitem",
+    "pk": 16,
+    "fields": {
+      "pack": 5,
+      "deliverable_type": "billboard",
+      "quantity": 1,
+      "description": "Billboard key visual",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 1,
+    "fields": {
+      "name": "Digital Only - 12 Months",
+      "usage_scope": [
+        "digital"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 365,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Standard digital-only usage for 12 months in Romania",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 2,
+    "fields": {
+      "name": "Digital + Social - 6 Months",
+      "usage_scope": [
+        "digital"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 180,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Short-term digital and social media usage",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 3,
+    "fields": {
+      "name": "Global Digital - 24 Months",
+      "usage_scope": [
+        "digital",
+        "global"
+      ],
+      "territories": [
+        "GLOBAL"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 730,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Global digital rights for 24 months",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 4,
+    "fields": {
+      "name": "ATL + BTL Romania - 12 Months",
+      "usage_scope": [
+        "atl",
+        "btl",
+        "digital"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 365,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Above and below the line usage in Romania for 12 months",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 5,
+    "fields": {
+      "name": "OOH + Digital - 6 Months",
+      "usage_scope": [
+        "ooh",
+        "digital"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 180,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Out-of-home and digital usage for 6 months",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 6,
+    "fields": {
+      "name": "Global ATL - 24 Months with Exclusivity",
+      "usage_scope": [
+        "atl",
+        "btl",
+        "digital",
+        "global"
+      ],
+      "territories": [
+        "GLOBAL"
+      ],
+      "exclusivity_category": "Beverage",
+      "exclusivity_duration_days": 730,
+      "usage_duration_days": 730,
+      "extensions_allowed": false,
+      "buyout": false,
+      "brand_list_blocked": [
+        "Coca-Cola",
+        "Pepsi",
+        "Red Bull"
+      ],
+      "is_template": true,
+      "notes": "Global ATL campaign with beverage category exclusivity",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 7,
+    "fields": {
+      "name": "Packaging + In-Store - 18 Months",
+      "usage_scope": [
+        "packaging",
+        "in_store",
+        "print"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 548,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Product packaging and in-store materials usage",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 8,
+    "fields": {
+      "name": "Broadcast (TV/Radio) - 12 Months",
+      "usage_scope": [
+        "broadcast",
+        "digital"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 365,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "TV and radio broadcast rights with digital support",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 9,
+    "fields": {
+      "name": "Event Only - 3 Months",
+      "usage_scope": [
+        "events",
+        "digital"
+      ],
+      "territories": [
+        "RO"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 90,
+      "extensions_allowed": true,
+      "buyout": false,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Event-specific usage with digital promotion rights",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "artist_sales.usageterms",
+    "pk": 10,
+    "fields": {
+      "name": "Full Buyout - Perpetual Global Rights",
+      "usage_scope": [
+        "digital",
+        "atl",
+        "btl",
+        "ooh",
+        "packaging",
+        "in_store",
+        "global",
+        "print",
+        "broadcast",
+        "cinema",
+        "events"
+      ],
+      "territories": [
+        "GLOBAL"
+      ],
+      "exclusivity_category": "",
+      "exclusivity_duration_days": null,
+      "usage_duration_days": 36500,
+      "extensions_allowed": false,
+      "buyout": true,
+      "brand_list_blocked": [],
+      "is_template": true,
+      "notes": "Complete buyout with perpetual global rights across all media",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  }
+]
