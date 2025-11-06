@@ -173,21 +173,10 @@ class TaskCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate(self, data):
-        # Ensure at least one association is provided (only on create, not update)
-        if not self.instance:  # Creating new task
-            if not any([data.get('campaign'), data.get('entity'), data.get('contract')]):
-                raise serializers.ValidationError(
-                    "At least one of campaign, entity, or contract must be provided."
-                )
-        # For updates, check if we have at least one association (from instance or data)
-        elif self.instance:
-            has_campaign = data.get('campaign') or self.instance.campaign
-            has_entity = data.get('entity') or self.instance.entity
-            has_contract = data.get('contract') or self.instance.contract
-            if not any([has_campaign, has_entity, has_contract]):
-                raise serializers.ValidationError(
-                    "At least one of campaign, entity, or contract must be provided."
-                )
+        # Associations (campaign, entity, contract) are now fully optional
+        # Tasks can be created for general/internal work not tied to any specific association
+        # Previous validation required at least one association, but this was too restrictive
+        # for ad-hoc tasks, internal work, or digital department tasks
         return data
 
 

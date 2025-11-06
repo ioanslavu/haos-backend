@@ -306,10 +306,28 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
         # For service_fee model
         if pricing_model == 'service_fee':
             # Value should be provided for service_fee campaigns
-            if not data.get('value') and not (self.instance and self.instance.value):
-                raise serializers.ValidationError({
-                    'value': 'Value is required for service_fee pricing model'
-                })
+            # Exception: digital_employee role can leave value empty (will default to 0)
+            request = self.context.get('request')
+            user_role = None
+            if request and hasattr(request, 'user'):
+                user = request.user
+                profile = getattr(user, 'profile', None)
+                if profile:
+                    user_role = profile.role
+
+            is_digital_employee = user_role == 'digital_employee'
+
+            # Check if value is None (not just falsy, since Decimal('0') is falsy)
+            value_is_missing = data.get('value') is None and not (self.instance and self.instance.value)
+
+            if value_is_missing:
+                if not is_digital_employee:
+                    raise serializers.ValidationError({
+                        'value': 'Value is required for service_fee pricing model'
+                    })
+                # For digital employees, default to 0
+                data['value'] = '0'
+
             # Revenue share fields should not be used
             if data.get('revenue_generated') or data.get('partner_share_percentage'):
                 raise serializers.ValidationError({

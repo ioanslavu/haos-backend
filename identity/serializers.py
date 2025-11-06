@@ -679,7 +679,7 @@ class EntityScoreCreateUpdateSerializer(serializers.ModelSerializer):
             'collaboration_frequency_score', 'feedback_score', 'payment_latency_score',
             'notes'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'department']
 
     def validate(self, data):
         """Validate EntityScore data."""
@@ -691,26 +691,22 @@ class EntityScoreCreateUpdateSerializer(serializers.ModelSerializer):
                         field: f"{field} must be between 1 and 10"
                     })
 
-        # For non-admins, ensure they can only create/update scores for their own department
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            user = request.user
-            profile = getattr(user, 'profile', None)
-
-            if profile and not profile.is_admin:
-                # Non-admins can only work with their own department
-                if 'department' in data and data['department'] != profile.department:
-                    raise serializers.ValidationError({
-                        'department': "You can only manage entity scores for your own department"
-                    })
-
         return data
 
     def create(self, validated_data):
-        """Create EntityScore and set updated_by."""
+        """Create EntityScore and set updated_by and department."""
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
-            validated_data['updated_by'] = request.user
+            user = request.user
+            validated_data['updated_by'] = user
+
+            # Auto-set department from user's profile
+            profile = getattr(user, 'profile', None)
+            if not profile or not profile.department:
+                raise serializers.ValidationError({
+                    'department': "User must have a department assigned to create entity scores"
+                })
+            validated_data['department'] = profile.department
 
         return super().create(validated_data)
 

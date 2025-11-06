@@ -80,7 +80,7 @@ urlpatterns = [
 
     # ERP System APIs
     path('api/v1/identity/', include('identity.urls')),
-    path('api/v1/catalog/', include('catalog.urls')),
+    path('api/v1/', include('catalog.urls')),
     path('api/v1/rights/', include('rights.urls')),
     path('api/v1/distribution/', include('distribution.urls')),
 

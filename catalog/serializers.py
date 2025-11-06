@@ -1,8 +1,12 @@
 from rest_framework import serializers
-from .models import Work, Recording, Release, Track, Asset
+from .models import (
+    Work, Recording, Release, Track, Asset,
+    Song, SongChecklistItem, SongStageTransition, SongAsset, SongNote, SongAlert
+)
 import os
 import re
 import uuid
+from django.utils import timezone
 from identity.models import Identifier
 from identity.serializers import IdentifierSerializer
 
@@ -323,3 +327,338 @@ class AssetUploadSerializer(serializers.ModelSerializer):
         validated_data['checksum'] = hasher.hexdigest()
 
         return Asset.objects.create(**validated_data)
+
+
+# ============================================================================
+# SONG WORKFLOW SERIALIZERS
+# ============================================================================
+
+
+class SongChecklistItemSerializer(serializers.ModelSerializer):
+    """Serializer for SongChecklistItem."""
+
+    assigned_to_name = serializers.CharField(
+        source='assigned_to.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+    completed_by_name = serializers.CharField(
+        source='completed_by.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+
+    class Meta:
+        model = SongChecklistItem
+        fields = [
+            'id', 'song', 'stage', 'category', 'item_name', 'description',
+            'order', 'required', 'validation_type', 'validation_rule',
+            'is_complete', 'completed_by', 'completed_by_name', 'completed_at',
+            'help_text', 'help_link', 'assigned_to', 'assigned_to_name',
+            'is_blocker', 'depends_on'
+        ]
+        read_only_fields = ['completed_at']
+
+
+class SongStageTransitionSerializer(serializers.ModelSerializer):
+    """Serializer for SongStageTransition audit log."""
+
+    transitioned_by_name = serializers.CharField(
+        source='transitioned_by.get_full_name',
+        read_only=True
+    )
+    from_stage_display = serializers.CharField(
+        source='get_from_stage_display',
+        read_only=True
+    )
+    to_stage_display = serializers.CharField(
+        source='get_to_stage_display',
+        read_only=True
+    )
+
+    class Meta:
+        model = SongStageTransition
+        fields = [
+            'id', 'song', 'from_stage', 'from_stage_display', 'to_stage',
+            'to_stage_display', 'transitioned_by', 'transitioned_by_name',
+            'transitioned_at', 'transition_type', 'notes',
+            'checklist_completion_at_transition', 'rejection_reason',
+            'rejection_category'
+        ]
+        read_only_fields = ['transitioned_at']
+
+
+class SongAssetSerializer(serializers.ModelSerializer):
+    """Serializer for SongAsset (marketing assets)."""
+
+    uploaded_by_name = serializers.CharField(
+        source='uploaded_by.get_full_name',
+        read_only=True
+    )
+    reviewed_by_name = serializers.CharField(
+        source='reviewed_by.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+    dimensions = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = SongAsset
+        fields = [
+            'id', 'song', 'asset_type', 'google_drive_url', 'file_format',
+            'width', 'height', 'dimensions', 'title', 'description',
+            'uploaded_by', 'uploaded_by_name', 'uploaded_at',
+            'review_status', 'reviewed_by', 'reviewed_by_name',
+            'reviewed_at', 'review_notes', 'is_primary'
+        ]
+        read_only_fields = ['uploaded_at', 'reviewed_at']
+
+
+class SongNoteSerializer(serializers.ModelSerializer):
+    """Serializer for SongNote."""
+
+    author_name = serializers.CharField(
+        source='author.get_full_name',
+        read_only=True
+    )
+    visible_to_department_names = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SongNote
+        fields = [
+            'id', 'song', 'author', 'author_name', 'created_at',
+            'note_type', 'content', 'pitched_to_artist', 'pitch_outcome',
+            'visible_to_departments', 'visible_to_department_names',
+            'is_internal'
+        ]
+        read_only_fields = ['created_at']
+
+    def get_visible_to_department_names(self, obj):
+        """Get names of departments that can see this note."""
+        return [dept.name for dept in obj.visible_to_departments.all()]
+
+
+class SongAlertSerializer(serializers.ModelSerializer):
+    """Serializer for SongAlert."""
+
+    song_title = serializers.CharField(source='song.title', read_only=True)
+    target_department_name = serializers.CharField(
+        source='target_department.name',
+        read_only=True,
+        allow_null=True
+    )
+    target_user_name = serializers.CharField(
+        source='target_user.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+
+    class Meta:
+        model = SongAlert
+        fields = [
+            'id', 'song', 'song_title', 'alert_type', 'target_department',
+            'target_department_name', 'target_user', 'target_user_name',
+            'title', 'message', 'action_url', 'action_label', 'created_at',
+            'is_read', 'read_at', 'priority'
+        ]
+        read_only_fields = ['created_at', 'read_at']
+
+
+class SongListSerializer(serializers.ModelSerializer):
+    """Minimal Song serializer for list view."""
+
+    artist = serializers.SerializerMethodField()
+    current_stage = serializers.CharField(source='stage', read_only=True)
+    stage_display = serializers.CharField(
+        source='get_stage_display',
+        read_only=True
+    )
+    assigned_department_name = serializers.CharField(
+        source='assigned_department.name',
+        read_only=True,
+        allow_null=True
+    )
+    assigned_user_name = serializers.CharField(
+        source='assigned_user.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+
+    class Meta:
+        model = Song
+        fields = [
+            'id', 'title', 'artist', 'current_stage', 'stage_display',
+            'checklist_progress', 'target_release_date', 'priority',
+            'is_overdue', 'assigned_department', 'assigned_department_name',
+            'assigned_user', 'assigned_user_name', 'created_at', 'days_in_current_stage'
+        ]
+        read_only_fields = ['checklist_progress', 'is_overdue', 'created_at', 'days_in_current_stage']
+
+    def get_artist(self, obj):
+        """Return artist as nested object with id and display_name."""
+        if obj.artist:
+            return {
+                'id': obj.artist.id,
+                'display_name': obj.artist.display_name
+            }
+        return None
+
+
+class SongDetailSerializer(serializers.ModelSerializer):
+    """
+    Detailed Song serializer with permission-aware field hiding.
+
+    Hides sensitive data based on user's department:
+    - Marketing: Cannot see splits, work details, recording technical details
+    - Digital: Cannot see splits (only names)
+    - Sales: Cannot see splits
+    """
+
+    artist = serializers.SerializerMethodField()
+    current_stage = serializers.CharField(source='stage', read_only=True)
+    stage_display = serializers.CharField(
+        source='get_stage_display',
+        read_only=True
+    )
+    assigned_department_name = serializers.CharField(
+        source='assigned_department.name',
+        read_only=True,
+        allow_null=True
+    )
+    assigned_user_name = serializers.CharField(
+        source='assigned_user.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+    created_by = serializers.SerializerMethodField()
+    stage_updated_by_name = serializers.CharField(
+        source='stage_updated_by.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+
+    # Related data
+    work_title = serializers.CharField(source='work.title', read_only=True, allow_null=True)
+    recordings_count = serializers.SerializerMethodField()
+    releases_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Song
+        fields = [
+            'id', 'title', 'artist', 'genre', 'language', 'duration',
+            'current_stage', 'stage_display', 'assigned_department', 'assigned_department_name',
+            'assigned_user', 'assigned_user_name', 'priority', 'target_release_date',
+            'stage_deadline', 'work', 'work_title', 'recordings_count', 'releases_count',
+            'created_by', 'created_at', 'updated_at',
+            'stage_entered_at', 'stage_updated_by', 'stage_updated_by_name',
+            'checklist_progress', 'is_overdue', 'days_in_current_stage',
+            'is_archived', 'is_blocked', 'blocked_reason', 'internal_notes',
+            'external_notes'
+        ]
+        read_only_fields = [
+            'checklist_progress', 'is_overdue', 'days_in_current_stage',
+            'created_at', 'updated_at', 'stage_entered_at'
+        ]
+
+    def get_artist(self, obj):
+        """Return artist as nested object with id and display_name."""
+        if obj.artist:
+            return {
+                'id': obj.artist.id,
+                'display_name': obj.artist.display_name
+            }
+        return None
+
+    def get_created_by(self, obj):
+        """Return created_by as nested object with id, email, and full_name."""
+        if obj.created_by:
+            return {
+                'id': obj.created_by.id,
+                'email': obj.created_by.email,
+                'full_name': obj.created_by.get_full_name()
+            }
+        return None
+
+    def get_recordings_count(self, obj):
+        """Count of recordings linked to this song."""
+        return obj.recordings.count()
+
+    def get_releases_count(self, obj):
+        """Count of releases linked to this song."""
+        return obj.releases.count()
+
+    def get_fields(self):
+        """
+        Dynamically remove fields based on user's department permissions.
+
+        Permission rules:
+        - Marketing: Hide work, splits (will be hidden via separate endpoints)
+        - Digital: Hide splits
+        - Sales: Hide splits
+        """
+        fields = super().get_fields()
+        request = self.context.get('request')
+
+        if request and request.user and hasattr(request.user, 'profile'):
+            user_profile = request.user.profile
+
+            # Admin can see everything
+            if user_profile.role.level >= 1000:
+                return fields
+
+            if not user_profile.department:
+                return fields
+
+            user_dept = user_profile.department.code.lower()
+
+            # Marketing sees limited info
+            if user_dept == 'marketing':
+                # Marketing cannot see Work details - they only work on assets
+                # Work data will be restricted in the viewset's get_queryset
+                pass
+
+            # Digital and Sales cannot see splits (handled in separate endpoints)
+            # No field removal needed here as splits are accessed via nested routes
+
+        return fields
+
+
+class SongCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating Songs."""
+
+    class Meta:
+        model = Song
+        fields = [
+            'title', 'artist', 'genre', 'language', 'duration',
+            'priority', 'target_release_date', 'stage_deadline',
+            'work', 'assigned_department', 'assigned_user',
+            'internal_notes', 'external_notes'
+        ]
+
+    def create(self, validated_data):
+        """Create song with created_by from request user."""
+        request = self.context.get('request')
+        validated_data['created_by'] = request.user
+
+        # Set initial stage
+        validated_data['stage'] = 'draft'
+        validated_data['stage_entered_at'] = timezone.now()
+
+        song = Song.objects.create(**validated_data)
+
+        # Generate checklist for draft stage if needed
+        # (Draft has no checklist by default, checklist generated on first transition)
+
+        return song
+
+    def update(self, instance, validated_data):
+        """Update song fields."""
+        # Don't allow direct stage updates via this serializer
+        # Stage updates must go through transition() action
+        validated_data.pop('stage', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance

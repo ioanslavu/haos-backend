@@ -193,15 +193,27 @@ class EntityViewSet(GlobalResourceViewSet):
         Business roles include: client, brand, label, booking, endorsements,
         publishing, productie, new_business, digital.
 
+        Special handling: When filtering by is_internal=true, shows ALL internal
+        entities regardless of role (artists, employees, etc.), not just business roles.
+
         Applies department filtering and search filters.
         """
-        business_roles = [
-            'client', 'brand', 'label', 'booking', 'endorsements',
-            'publishing', 'productie', 'new_business', 'digital'
-        ]
-        queryset = self.get_queryset().filter(
-            entity_roles__role__in=business_roles
-        ).distinct()
+        # Check if user is filtering by internal entities
+        is_internal_filter = request.query_params.get('is_internal')
+
+        if is_internal_filter == 'true':
+            # Show ALL internal entities regardless of role
+            # This allows searching for internal artists, employees, etc.
+            queryset = self.get_queryset()
+        else:
+            # Normal behavior: filter to business roles only
+            business_roles = [
+                'client', 'brand', 'label', 'booking', 'endorsements',
+                'publishing', 'productie', 'new_business', 'digital'
+            ]
+            queryset = self.get_queryset().filter(
+                entity_roles__role__in=business_roles
+            ).distinct()
 
         # Apply all filters including search
         queryset = self.filter_queryset(queryset)
