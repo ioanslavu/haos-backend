@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'crm_extensions',
     'artist_sales',  # NEW: Unified opportunities system (2025)
     'notifications',
+    'notes',  # NEW: Notes feature (2025)
 ]
 
 SITE_ID = 1

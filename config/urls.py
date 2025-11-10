@@ -98,6 +98,9 @@ urlpatterns = [
 
     # Notifications API
     path('api/v1/', include('notifications.urls')),
+
+    # Notes API (2025)
+    path('api/v1/', include('notes.urls')),
 ]
 
 # Serve media files in development
