@@ -49,6 +49,12 @@ app.conf.beat_schedule = {
         'task': 'notifications.check_overdue_tasks',
         'schedule': crontab(hour='8-20/4', minute=0),  # Every 4 hours from 8 AM to 8 PM
     },
+
+    # Song workflow daily alerts (midnight)
+    'daily-song-alerts': {
+        'task': 'catalog.run_daily_song_alerts',
+        'schedule': crontab(hour=0, minute=0),  # Midnight daily
+    },
 }
 
 

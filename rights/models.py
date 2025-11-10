@@ -21,25 +21,13 @@ class Credit(models.Model):
     WORK_ROLE_CHOICES = [
         ('composer', 'Composer'),
         ('lyricist', 'Lyricist'),
-        ('arranger', 'Arranger'),
-        ('publisher', 'Publisher'),
-        ('sub_publisher', 'Sub-Publisher'),
+        ('arranger', 'Editor'),
     ]
 
     RECORDING_ROLE_CHOICES = [
         ('artist', 'Artist'),
-        ('feat', 'Featured Artist'),
         ('producer', 'Producer'),
-        ('co_producer', 'Co-Producer'),
-        ('exec_producer', 'Executive Producer'),
-        ('audio_editor', 'Audio Editor'),
-        ('mixer', 'Mixer'),
-        ('mastering_engineer', 'Mastering Engineer'),
-        ('director', 'Director'),
-        ('vocalist', 'Vocalist'),
-        ('instrumentalist', 'Instrumentalist'),
-        ('conductor', 'Conductor'),
-        ('orchestra', 'Orchestra'),
+        ('audio_editor', 'Editor'),
     ]
 
     # Combine all roles for the field (validation will check scope)

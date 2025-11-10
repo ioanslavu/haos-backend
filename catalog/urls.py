@@ -5,7 +5,7 @@ from .views import (
     WorkViewSet, RecordingViewSet, ReleaseViewSet,
     TrackViewSet, AssetViewSet,
     SongViewSet, SongChecklistViewSet, SongAssetViewSet,
-    SongNoteViewSet, SongAlertViewSet
+    SongNoteViewSet, SongAlertViewSet, AlertConfigurationViewSet
 )
 from .aggregate_views import song_hub, track_preview
 
@@ -20,6 +20,7 @@ router.register(r'assets', AssetViewSet)
 # Song Workflow router
 router.register(r'songs', SongViewSet, basename='song')
 router.register(r'alerts', SongAlertViewSet, basename='alert')
+router.register(r'alert-configurations', AlertConfigurationViewSet, basename='alert-configuration')
 
 # Nested routers for Song
 songs_router = nested_routers.NestedDefaultRouter(router, r'songs', lookup='song')

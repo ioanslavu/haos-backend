@@ -1,1 +1,0 @@
-# Artist Sales migrations

@@ -116,6 +116,74 @@ class Task(models.Model):
         help_text="Contract this task is associated with"
     )
 
+    # NEW: Additional explicit foreign keys for universal task system
+    song = models.ForeignKey(
+        'catalog.Song',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='tasks',
+        help_text="Song this task is associated with"
+    )
+
+    work = models.ForeignKey(
+        'catalog.Work',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='tasks',
+        help_text="Work this task is associated with"
+    )
+
+    recording = models.ForeignKey(
+        'catalog.Recording',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='tasks',
+        help_text="Recording this task is associated with"
+    )
+
+    opportunity = models.ForeignKey(
+        'artist_sales.Opportunity',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='crm_tasks',
+        help_text="Opportunity this task is associated with"
+    )
+
+    deliverable = models.ForeignKey(
+        'artist_sales.OpportunityDeliverable',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='tasks',
+        help_text="Deliverable this task is associated with"
+    )
+
+    # NEW: Checklist linking
+    song_checklist_item = models.ForeignKey(
+        'catalog.SongChecklistItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tasks',
+        help_text="Song checklist item this task represents"
+    )
+
+    source_stage = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Stage this task belongs to (for display when stage changes)"
+    )
+
+    source_checklist_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Original checklist item name (for reference)"
+    )
+
     # Assignment and ownership
     # DEPRECATED: Use assigned_to_users instead (kept for migration)
     assigned_to = models.ForeignKey(
@@ -271,6 +339,14 @@ class Task(models.Model):
             models.Index(fields=['task_type', 'status']),
             models.Index(fields=['tag', 'status']),
             models.Index(fields=['reminder_date', 'follow_up_reminder_sent']),
+            # NEW: Indices for universal task system
+            models.Index(fields=['song', 'status']),
+            models.Index(fields=['work', 'status']),
+            models.Index(fields=['recording', 'status']),
+            models.Index(fields=['opportunity', 'status']),
+            models.Index(fields=['deliverable', 'status']),
+            models.Index(fields=['song_checklist_item']),
+            models.Index(fields=['source_stage', 'status']),
         ]
         verbose_name = 'Task'
         verbose_name_plural = 'Tasks'
@@ -311,6 +387,7 @@ class Task(models.Model):
     def is_blocked(self):
         """Check if task is blocked by other tasks"""
         return self.blocked_by.filter(status__in=['todo', 'in_progress', 'blocked']).exists()
+
 
 
 class TaskAssignment(models.Model):
@@ -812,3 +889,182 @@ class EntityChangeRequest(models.Model):
         self.reviewed_at = timezone.now()
         self.admin_notes = notes
         self.save()
+
+
+class FlowTrigger(models.Model):
+    """
+    Automatic trigger that creates tasks when entity events occur.
+    Use sparingly - most tasks should be created manually or from checklists.
+    """
+    name = models.CharField(
+        max_length=200,
+        help_text="Descriptive name for this trigger"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed description of when and why this trigger fires"
+    )
+
+    trigger_entity_type = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Entity type that triggers this (e.g., 'work', 'contract')"
+    )
+
+    trigger_event = models.CharField(
+        max_length=50,
+        choices=[
+            ('created', 'Entity Created'),
+            ('updated', 'Entity Updated'),
+            ('status_changed', 'Status Changed'),
+        ],
+        db_index=True,
+        help_text="Event type that triggers this"
+    )
+
+    trigger_conditions = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="""
+        Optional conditions that must be met for trigger to fire.
+        Example: {"field": "contract_type", "operator": "equals", "value": "publishing"}
+        """
+    )
+
+    creates_task = models.BooleanField(
+        default=True,
+        help_text="Whether this trigger creates a task"
+    )
+
+    task_config = models.JSONField(
+        default=dict,
+        help_text="""
+        Configuration for task creation.
+        Example: {
+            "title_template": "Handle contract for {work.name}",
+            "description_template": "New contract created for work {work.name}",
+            "department": "publishing",
+            "priority": 3,
+            "task_type": "contract_prep"
+        }
+        """
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Whether this trigger is currently active"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['trigger_entity_type', 'trigger_event']
+        indexes = [
+            models.Index(fields=['trigger_entity_type', 'trigger_event', 'is_active']),
+        ]
+        verbose_name = 'Flow Trigger'
+        verbose_name_plural = 'Flow Triggers'
+
+    def __str__(self):
+        return f"{self.name} ({self.trigger_entity_type}.{self.trigger_event})"
+
+
+class ManualTrigger(models.Model):
+    """
+    Manual trigger that creates tasks when users click buttons in the UI.
+    Most common way to create tasks - user-initiated, on-demand.
+    """
+    name = models.CharField(
+        max_length=200,
+        help_text="Internal name for this trigger"
+    )
+
+    button_label = models.CharField(
+        max_length=100,
+        help_text="Label shown on the button (e.g., 'Send to Marketing')"
+    )
+
+    button_style = models.CharField(
+        max_length=20,
+        choices=[
+            ('primary', 'Primary'),
+            ('secondary', 'Secondary'),
+            ('success', 'Success'),
+            ('warning', 'Warning'),
+            ('danger', 'Danger'),
+        ],
+        default='primary',
+        help_text="Visual style of the button"
+    )
+
+    entity_type = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Entity type this button appears on (e.g., 'opportunity', 'contract')"
+    )
+
+    context = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Specific context where button appears (e.g., 'deliverable_list', 'detail_page')"
+    )
+
+    action_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('create_task', 'Create Task'),
+            ('start_flow', 'Start Flow'),
+            ('update_status', 'Update Status'),
+        ],
+        default='create_task',
+        help_text="Action performed when button is clicked"
+    )
+
+    action_config = models.JSONField(
+        default=dict,
+        help_text="""
+        Configuration for the action.
+        Example: {
+            "task_title_template": "Create {deliverable_type} for {opportunity.name}",
+            "target_department": "marketing",
+            "flow": "marketing_deliverable",
+            "priority": 2
+        }
+        """
+    )
+
+    visible_to_departments = models.ManyToManyField(
+        'api.Department',
+        blank=True,
+        related_name='manual_triggers',
+        help_text="Departments that can see and use this trigger"
+    )
+
+    required_permissions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of required permissions to use this trigger"
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Whether this trigger is currently active"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['entity_type', 'context', 'button_label']
+        indexes = [
+            models.Index(fields=['entity_type', 'context', 'is_active']),
+        ]
+        verbose_name = 'Manual Trigger'
+        verbose_name_plural = 'Manual Triggers'
+
+    def __str__(self):
+        return f"{self.button_label} ({self.entity_type})"

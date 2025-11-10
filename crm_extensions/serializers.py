@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Task, TaskAssignment, Activity, CampaignMetrics, EntityChangeRequest
+from .models import Task, TaskAssignment, Activity, CampaignMetrics, EntityChangeRequest, FlowTrigger, ManualTrigger
 from campaigns.models import Campaign
 from identity.models import Entity
 from contracts.models import Contract
@@ -27,12 +27,22 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     """
     Serializer for Task model with nested relationship details.
+    Includes universal task system entity relationships.
     """
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
     created_by_detail = serializers.SerializerMethodField(read_only=True)
     campaign_detail = serializers.SerializerMethodField(read_only=True)
     entity_detail = serializers.SerializerMethodField(read_only=True)
     contract_detail = serializers.SerializerMethodField(read_only=True)
+
+    # Universal task system entity relationships
+    song_detail = serializers.SerializerMethodField(read_only=True)
+    work_detail = serializers.SerializerMethodField(read_only=True)
+    recording_detail = serializers.SerializerMethodField(read_only=True)
+    opportunity_detail = serializers.SerializerMethodField(read_only=True)
+    deliverable_detail = serializers.SerializerMethodField(read_only=True)
+    checklist_item_detail = serializers.SerializerMethodField(read_only=True)
+
     department_name = serializers.CharField(source='department.name', read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
     is_blocked = serializers.BooleanField(read_only=True)
@@ -56,6 +66,24 @@ class TaskSerializer(serializers.ModelSerializer):
             'entity_detail',
             'contract',
             'contract_detail',
+
+            # Universal task system entity relationships
+            'song',
+            'song_detail',
+            'work',
+            'work_detail',
+            'recording',
+            'recording_detail',
+            'opportunity',
+            'opportunity_detail',
+            'deliverable',
+            'deliverable_detail',
+
+            # Checklist linking
+            'song_checklist_item',
+            'checklist_item_detail',
+            'source_stage',
+            'source_checklist_name',
 
             # Assignment
             'assignments',
@@ -129,6 +157,90 @@ class TaskSerializer(serializers.ModelSerializer):
                 'title': obj.contract.title,
                 'contract_number': obj.contract.contract_number,
                 'status': obj.contract.status
+            }
+        return None
+
+    def get_song_detail(self, obj):
+        if obj.song:
+            return {
+                'id': obj.song.id,
+                'title': obj.song.title,
+                'stage': obj.song.stage,
+                'artist': obj.song.artist.display_name if obj.song.artist else None
+            }
+        return None
+
+    def get_work_detail(self, obj):
+        if obj.work:
+            # Get ISWC from Identifier model
+            iswc = None
+            try:
+                from identity.models import Identifier
+                identifier = Identifier.objects.get(
+                    owner_type='work',
+                    owner_id=obj.work.id,
+                    scheme='ISWC'
+                )
+                iswc = identifier.value
+            except Identifier.DoesNotExist:
+                pass
+
+            return {
+                'id': obj.work.id,
+                'title': obj.work.title,
+                'iswc': iswc,
+            }
+        return None
+
+    def get_recording_detail(self, obj):
+        if obj.recording:
+            # Get ISRC from Identifier model
+            isrc = None
+            try:
+                from identity.models import Identifier
+                identifier = Identifier.objects.get(
+                    owner_type='recording',
+                    owner_id=obj.recording.id,
+                    scheme='ISRC'
+                )
+                isrc = identifier.value
+            except Identifier.DoesNotExist:
+                pass
+
+            return {
+                'id': obj.recording.id,
+                'title': obj.recording.title,
+                'isrc': isrc,
+            }
+        return None
+
+    def get_opportunity_detail(self, obj):
+        if obj.opportunity:
+            return {
+                'id': obj.opportunity.id,
+                'name': obj.opportunity.name,
+                'stage': obj.opportunity.stage,
+                'value': str(obj.opportunity.value) if obj.opportunity.value else None
+            }
+        return None
+
+    def get_deliverable_detail(self, obj):
+        if obj.deliverable:
+            return {
+                'id': obj.deliverable.id,
+                'deliverable_type': obj.deliverable.get_deliverable_type_display(),
+                'status': obj.deliverable.status,
+                'due_date': obj.deliverable.due_date
+            }
+        return None
+
+    def get_checklist_item_detail(self, obj):
+        if obj.song_checklist_item:
+            return {
+                'id': obj.song_checklist_item.id,
+                'name': obj.song_checklist_item.item_name,
+                'checklist_name': f"{obj.song_checklist_item.stage} - {obj.song_checklist_item.category}",
+                'is_complete': obj.song_checklist_item.is_complete,
             }
         return None
 
@@ -486,3 +598,64 @@ class EntityChangeRequestSerializer(serializers.ModelSerializer):
                 'kind': obj.entity.kind,
             }
         return None
+
+class FlowTriggerSerializer(serializers.ModelSerializer):
+    """
+    Serializer for FlowTrigger - automatic task creation triggers.
+    Read-only for frontend consumption.
+    """
+    trigger_event_display = serializers.CharField(source='get_trigger_event_display', read_only=True)
+
+    class Meta:
+        model = FlowTrigger
+        fields = [
+            'id',
+            'name',
+            'description',
+            'trigger_entity_type',
+            'trigger_event',
+            'trigger_event_display',
+            'trigger_conditions',
+            'creates_task',
+            'task_config',
+            'is_active',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class ManualTriggerSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ManualTrigger - UI button definitions for task creation.
+    """
+    visible_departments = serializers.SlugRelatedField(
+        slug_field='name',
+        many=True,
+        read_only=True,
+        source='visible_to_departments'
+    )
+    button_style_display = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ManualTrigger
+        fields = [
+            'id',
+            'name',
+            'button_label',
+            'button_style',
+            'button_style_display',
+            'entity_type',
+            'context',
+            'action_type',
+            'action_config',
+            'visible_departments',
+            'required_permissions',
+            'is_active',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+    def get_button_style_display(self, obj):
+        return obj.button_style.capitalize() if obj.button_style else 'Primary'

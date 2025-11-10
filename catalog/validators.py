@@ -37,11 +37,15 @@ def validate_auto_field_exists(item):
     # Get the entity based on type
     entity = None
     if entity_type == 'work':
-        entity = song.primary_work
+        entity = song.work
     elif entity_type == 'recording':
-        entity = song.primary_recording
+        # If this is a recording-specific checklist item, validate against that recording
+        if item.recording:
+            entity = item.recording
+        else:
+            entity = song.recordings.first()  # Fallback for song-level recording checks
     elif entity_type == 'release':
-        entity = song.primary_release
+        entity = song.releases.first()  # Get primary release from M2M
     elif entity_type == 'song':
         entity = song
 
@@ -93,7 +97,11 @@ def validate_auto_file_exists(item):
 
     if entity_type == 'recording':
         # Check if recording has a specific file field
-        recording = song.primary_recording
+        # If this is a recording-specific checklist item, validate against that recording
+        if item.recording:
+            recording = item.recording
+        else:
+            recording = song.recordings.first()  # Fallback for song-level recording checks
         if not recording:
             return False
 
@@ -163,9 +171,13 @@ def validate_auto_split_validated(item):
     # Get the entity
     entity = None
     if entity_type == 'work':
-        entity = song.primary_work
+        entity = song.work
     elif entity_type == 'recording':
-        entity = song.primary_recording
+        # If this is a recording-specific checklist item, validate against that recording
+        if item.recording:
+            entity = item.recording
+        else:
+            entity = song.recordings.first()  # Fallback for song-level recording checks
 
     if not entity:
         return False
@@ -211,11 +223,11 @@ def validate_auto_entity_exists(item):
     song = item.song
 
     if entity_type == 'work':
-        return song.primary_work is not None
+        return song.work is not None
     elif entity_type == 'recording':
-        return song.primary_recording is not None
+        return song.recordings.exists()  # Check if any recording exists
     elif entity_type == 'release':
-        return song.primary_release is not None
+        return song.releases.exists()  # Check if any release exists
 
     return False
 
@@ -249,26 +261,32 @@ def validate_auto_count_minimum(item):
 
     if entity_type == 'work_writers':
         # Count writer splits for the work
-        if not song.primary_work:
+        if not song.work:
             return False
         count = Split.objects.filter(
             scope='work',
-            object_id=song.primary_work.id,
+            object_id=song.work.id,
             right_type='writer'
         ).count()
 
     elif entity_type == 'recording_credits':
         # Count credits for the recording
-        if not song.primary_recording:
+        # If this is a recording-specific checklist item, validate against that recording
+        if item.recording:
+            recording = item.recording
+        else:
+            recording = song.recordings.first()  # Fallback for song-level recording checks
+        if not recording:
             return False
         count = Credit.objects.filter(
             scope='recording',
-            object_id=song.primary_recording.id
+            object_id=recording.id
         ).count()
 
     elif entity_type == 'release_publications':
         # Count publications for the release
-        if not song.primary_release:
+        release = song.releases.first()  # Get primary release from M2M
+        if not release:
             return False
         # This requires Publication model - placeholder for now
         # TODO: Implement when Publication model exists
@@ -336,7 +354,7 @@ def validate_release_metadata(song):
     Returns:
         Boolean indicating if validation passed
     """
-    release = song.primary_release
+    release = song.releases.first()  # Get primary release from M2M
     if not release:
         return False
 
@@ -440,45 +458,82 @@ def revalidate_song_checklist(song):
     Returns:
         Dictionary with validation summary
     """
-    # Get checklist items for current stage (requires SongChecklistItem model)
-    # This is a placeholder for when model is created
-    # TODO: Implement when SongChecklistItem model exists
+    from catalog.models import SongChecklistItem
 
-    # Expected implementation:
-    # items = song.checklist_items.filter(
-    #     stage=song.stage,
-    #     validation_type__startswith='auto'
-    # )
-    #
-    # results = {
-    #     'total': items.count(),
-    #     'passed': 0,
-    #     'failed': 0,
-    #     'updated': []
-    # }
-    #
-    # for item in items:
-    #     old_status = item.is_complete
-    #     new_status = revalidate_checklist_item(item)
-    #
-    #     if new_status:
-    #         results['passed'] += 1
-    #     else:
-    #         results['failed'] += 1
-    #
-    #     if old_status != new_status:
-    #         results['updated'].append({
-    #             'item_id': item.id,
-    #             'item_name': item.item_name,
-    #             'old_status': old_status,
-    #             'new_status': new_status
-    #         })
-    #
-    # return results
+    # Get checklist items for current stage
+    items = SongChecklistItem.objects.filter(
+        song=song,
+        stage=song.stage,
+        validation_type__startswith='auto'
+    )
 
-    return {
-        'total': 0,
+    results = {
+        'total': items.count(),
         'passed': 0,
         'failed': 0,
         'updated': []
     }
+
+    for item in items:
+        old_status = item.is_complete
+        new_status = revalidate_checklist_item(item)
+
+        if new_status:
+            results['passed'] += 1
+        else:
+            results['failed'] += 1
+
+        if old_status != new_status:
+            results['updated'].append({
+                'item_id': item.id,
+                'item_name': item.item_name,
+                'old_status': old_status,
+                'new_status': new_status
+            })
+
+    return results
+
+
+def revalidate_recording_checklist(recording):
+    """
+    Re-validates all automatic checklist items for a specific recording.
+
+    Args:
+        recording: Recording instance
+
+    Returns:
+        Dictionary with validation summary
+    """
+    from catalog.models import SongChecklistItem
+
+    # Get checklist items for this specific recording
+    items = SongChecklistItem.objects.filter(
+        recording=recording,
+        validation_type__startswith='auto'
+    )
+
+    results = {
+        'total': items.count(),
+        'passed': 0,
+        'failed': 0,
+        'updated': []
+    }
+
+    for item in items:
+        old_status = item.is_complete
+        new_status = revalidate_checklist_item(item)
+
+        if new_status:
+            results['passed'] += 1
+        else:
+            results['failed'] += 1
+
+        if old_status != new_status:
+            results['updated'].append({
+                'item_id': item.id,
+                'item_name': item.item_name,
+                'old_status': old_status,
+                'new_status': new_status
+            })
+
+    return results

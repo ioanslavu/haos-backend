@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from api.viewsets import OwnedResourceViewSet, DepartmentScopedViewSet
 from api.scoping import QuerysetScoping
 
-from .models import Task, Activity, CampaignMetrics, EntityChangeRequest
+from .models import Task, Activity, CampaignMetrics, EntityChangeRequest, FlowTrigger, ManualTrigger
 from .serializers import (
     TaskSerializer,
     TaskCreateUpdateSerializer,
@@ -17,6 +17,8 @@ from .serializers import (
     ActivityCreateUpdateSerializer,
     CampaignMetricsSerializer,
     EntityChangeRequestSerializer,
+    FlowTriggerSerializer,
+    ManualTriggerSerializer,
 )
 from .permissions import TaskPermission, ActivityPermission, EntityChangeRequestPermission
 
@@ -52,6 +54,14 @@ class TaskViewSet(OwnedResourceViewSet):
         'campaign': ['exact'],
         'entity': ['exact'],
         'contract': ['exact'],
+        # Universal task system entity filters
+        'song': ['exact'],
+        'work': ['exact'],
+        'recording': ['exact'],
+        'opportunity': ['exact'],
+        'deliverable': ['exact'],
+        'song_checklist_item': ['exact'],
+        'source_stage': ['exact', 'in'],
         'due_date': ['exact', 'gte', 'lte'],
         'created_at': ['gte', 'lte'],
     }
@@ -61,7 +71,11 @@ class TaskViewSet(OwnedResourceViewSet):
     ownership_field = 'created_by'
     assigned_field = 'assignments'
     assigned_through_field = 'user'  # TaskAssignment.user (standard pattern)
-    select_related_fields = ['campaign', 'entity', 'contract', 'assigned_to', 'created_by', 'department', 'parent_task']
+    select_related_fields = [
+        'campaign', 'entity', 'contract', 'assigned_to', 'created_by', 'department', 'parent_task',
+        # Universal task system entities
+        'song', 'song__artist', 'work', 'recording', 'opportunity', 'deliverable', 'song_checklist_item'
+    ]
     prefetch_related_fields = ['blocks_tasks', 'subtasks', 'assignments__user']
 
     def get_queryset(self):
@@ -97,6 +111,24 @@ class TaskViewSet(OwnedResourceViewSet):
         if assigned_to_in:
             user_ids = [int(uid) for uid in assigned_to_in.split(',')]
             queryset = queryset.filter(assigned_users__id__in=user_ids).distinct()
+
+        # Filter by entity type (which type of entity the task is linked to)
+        entity_type = self.request.query_params.get('entity_type')
+        if entity_type:
+            if entity_type == 'song':
+                queryset = queryset.filter(song__isnull=False)
+            elif entity_type == 'work':
+                queryset = queryset.filter(work__isnull=False)
+            elif entity_type == 'recording':
+                queryset = queryset.filter(recording__isnull=False)
+            elif entity_type == 'opportunity':
+                queryset = queryset.filter(opportunity__isnull=False)
+            elif entity_type == 'deliverable':
+                queryset = queryset.filter(deliverable__isnull=False)
+            elif entity_type == 'contract':
+                queryset = queryset.filter(contract__isnull=False)
+            elif entity_type == 'campaign':
+                queryset = queryset.filter(campaign__isnull=False)
 
         return queryset
 
@@ -596,3 +628,115 @@ class EntityChangeRequestViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(change_request)
         return Response(serializer.data)
+
+class FlowTriggerViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for FlowTrigger - read-only list of automatic triggers.
+    Used by frontend to understand what automatic actions exist.
+    """
+    queryset = FlowTrigger.objects.filter(is_active=True)
+    serializer_class = FlowTriggerSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['name', 'description', 'trigger_entity_type']
+    filterset_fields = ['trigger_entity_type', 'trigger_event', 'creates_task']
+
+
+class ManualTriggerViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for ManualTrigger - provides UI button definitions and execution endpoint.
+
+    Endpoints:
+    - GET /api/manual-triggers/ - List all active triggers
+    - GET /api/manual-triggers/?entity_type=song&context=label_recording_stage - Filter by entity/context
+    - POST /api/manual-triggers/{id}/execute/ - Execute trigger (create task)
+    """
+    serializer_class = ManualTriggerSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['name', 'button_label']
+    filterset_fields = ['entity_type', 'context', 'action_type']
+
+    def get_queryset(self):
+        """Filter triggers based on user's department visibility and active status."""
+        queryset = ManualTrigger.objects.filter(is_active=True)
+        
+        # Filter by user's department (if they have one)
+        user = self.request.user
+        if hasattr(user, 'profile') and user.profile.department:
+            # Show triggers visible to user's department
+            queryset = queryset.filter(
+                Q(visible_to_departments=user.profile.department) |
+                Q(visible_to_departments__isnull=True)  # No department restrictions
+            ).distinct()
+        
+        return queryset
+
+    @action(detail=True, methods=['post'], url_path='execute')
+    def execute(self, request, pk=None):
+        """
+        Execute a manual trigger - creates a task for the specified entity.
+        
+        Request body:
+        {
+            "entity_id": 123,  // ID of the entity (song, deliverable, etc.)
+            "context_data": {}  // Optional additional context data
+        }
+        
+        Returns the created task.
+        """
+        trigger = self.get_object()
+        entity_id = request.data.get('entity_id')
+        context_data = request.data.get('context_data', {})
+
+        if not entity_id:
+            return Response(
+                {'error': 'entity_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get the entity based on trigger entity_type
+        entity = None
+        try:
+            if trigger.entity_type == 'song':
+                from catalog.models import Song
+                entity = Song.objects.get(pk=entity_id)
+            elif trigger.entity_type == 'deliverable':
+                from artist_sales.models import OpportunityDeliverable
+                entity = OpportunityDeliverable.objects.get(pk=entity_id)
+            elif trigger.entity_type == 'opportunity':
+                from artist_sales.models import Opportunity
+                entity = Opportunity.objects.get(pk=entity_id)
+            elif trigger.entity_type == 'contract':
+                from contracts.models import Contract
+                entity = Contract.objects.get(pk=entity_id)
+            else:
+                return Response(
+                    {'error': f'Unsupported entity_type: {trigger.entity_type}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            return Response(
+                {'error': f'Entity not found: {str(e)}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Create task using TaskGenerator
+        from crm_extensions.services import TaskGenerator
+        task = TaskGenerator.create_from_manual_trigger(
+            trigger=trigger,
+            entity=entity,
+            user=request.user,
+            context_data=context_data
+        )
+
+        if not task:
+            return Response(
+                {'error': 'Failed to create task'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Return the created task
+        from .serializers import TaskSerializer
+        serializer = TaskSerializer(task)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

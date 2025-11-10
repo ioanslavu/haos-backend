@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     Work, Recording, Release, Track, Asset,
-    Song, SongChecklistItem, SongStageTransition, SongAsset, SongNote, SongAlert
+    Song, SongArtist, SongChecklistItem, SongStageTransition, SongAsset, SongNote, SongAlert,
+    AlertConfiguration
 )
 import os
 import re
@@ -91,6 +92,17 @@ class WorkDetailSerializer(serializers.ModelSerializer):
         return IdentifierSerializer(identifiers, many=True).data
 
 
+class WorkCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating Work."""
+
+    class Meta:
+        model = Work
+        fields = [
+            'title', 'alternate_titles', 'language', 'genre', 'sub_genre',
+            'year_composed', 'translation_of', 'adaptation_of', 'lyrics', 'notes'
+        ]
+
+
 class RecordingListSerializer(serializers.ModelSerializer):
     """Light serializer for Recording listing."""
 
@@ -174,6 +186,18 @@ class TrackSerializer(serializers.ModelSerializer):
     def get_recording_isrc(self, obj):
         """Get ISRC of the recording."""
         return obj.recording.get_isrc() if obj.recording else None
+
+
+class RecordingCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating Recording."""
+
+    class Meta:
+        model = Recording
+        fields = [
+            'id', 'title', 'type', 'status', 'work', 'duration_seconds', 'bpm',
+            'key', 'recording_date', 'studio', 'version', 'derived_from', 'notes'
+        ]
+        read_only_fields = ['id']
 
 
 class ReleaseListSerializer(serializers.ModelSerializer):
@@ -347,17 +371,22 @@ class SongChecklistItemSerializer(serializers.ModelSerializer):
         read_only=True,
         allow_null=True
     )
+    recording_title = serializers.CharField(
+        source='recording.title',
+        read_only=True,
+        allow_null=True
+    )
 
     class Meta:
         model = SongChecklistItem
         fields = [
-            'id', 'song', 'stage', 'category', 'item_name', 'description',
-            'order', 'required', 'validation_type', 'validation_rule',
-            'is_complete', 'completed_by', 'completed_by_name', 'completed_at',
-            'help_text', 'help_link', 'assigned_to', 'assigned_to_name',
+            'id', 'song', 'recording', 'recording_title', 'stage', 'category',
+            'item_name', 'description', 'order', 'required', 'validation_type',
+            'validation_rule', 'is_complete', 'completed_by', 'completed_by_name',
+            'completed_at', 'help_text', 'help_link', 'assigned_to', 'assigned_to_name',
             'is_blocker', 'depends_on'
         ]
-        read_only_fields = ['completed_at']
+        read_only_fields = ['completed_at', 'recording_title']
 
 
 class SongStageTransitionSerializer(serializers.ModelSerializer):
@@ -468,11 +497,8 @@ class SongListSerializer(serializers.ModelSerializer):
     """Minimal Song serializer for list view."""
 
     artist = serializers.SerializerMethodField()
-    current_stage = serializers.CharField(source='stage', read_only=True)
-    stage_display = serializers.CharField(
-        source='get_stage_display',
-        read_only=True
-    )
+    current_stage = serializers.SerializerMethodField()
+    stage_display = serializers.SerializerMethodField()
     assigned_department_name = serializers.CharField(
         source='assigned_department.name',
         read_only=True,
@@ -503,6 +529,30 @@ class SongListSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def get_current_stage(self, obj):
+        """Return stage, defaulting to 'draft' if null."""
+        return obj.stage or 'draft'
+
+    def get_stage_display(self, obj):
+        """Return stage display name, defaulting to 'Draft' if null."""
+        if obj.stage:
+            return obj.get_stage_display()
+        return 'Draft'
+
+
+class SongArtistSerializer(serializers.ModelSerializer):
+    """Serializer for featured artists on songs."""
+
+    artist_id = serializers.IntegerField(source='artist.id', read_only=True)
+    artist_name = serializers.CharField(source='artist.name', read_only=True)
+    artist_display_name = serializers.CharField(source='artist.display_name', read_only=True)
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+
+    class Meta:
+        model = SongArtist
+        fields = ['id', 'artist_id', 'artist_name', 'artist_display_name', 'role', 'role_display', 'order', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
 
 class SongDetailSerializer(serializers.ModelSerializer):
     """
@@ -515,11 +565,8 @@ class SongDetailSerializer(serializers.ModelSerializer):
     """
 
     artist = serializers.SerializerMethodField()
-    current_stage = serializers.CharField(source='stage', read_only=True)
-    stage_display = serializers.CharField(
-        source='get_stage_display',
-        read_only=True
-    )
+    current_stage = serializers.SerializerMethodField()
+    stage_display = serializers.SerializerMethodField()
     assigned_department_name = serializers.CharField(
         source='assigned_department.name',
         read_only=True,
@@ -538,9 +585,16 @@ class SongDetailSerializer(serializers.ModelSerializer):
     )
 
     # Related data
-    work_title = serializers.CharField(source='work.title', read_only=True, allow_null=True)
+    work = serializers.SerializerMethodField()
+    recording = serializers.SerializerMethodField()
+    release = serializers.SerializerMethodField()
     recordings_count = serializers.SerializerMethodField()
     releases_count = serializers.SerializerMethodField()
+
+    # Featured artists
+    featured_artists = SongArtistSerializer(source='artist_credits', many=True, read_only=True)
+    all_artists = serializers.SerializerMethodField()
+    display_artists = serializers.CharField(read_only=True)
 
     class Meta:
         model = Song
@@ -548,12 +602,13 @@ class SongDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 'artist', 'genre', 'language', 'duration',
             'current_stage', 'stage_display', 'assigned_department', 'assigned_department_name',
             'assigned_user', 'assigned_user_name', 'priority', 'target_release_date',
-            'stage_deadline', 'work', 'work_title', 'recordings_count', 'releases_count',
+            'stage_deadline', 'work', 'recording', 'release', 'recordings_count', 'releases_count',
             'created_by', 'created_at', 'updated_at',
             'stage_entered_at', 'stage_updated_by', 'stage_updated_by_name',
             'checklist_progress', 'is_overdue', 'days_in_current_stage',
             'is_archived', 'is_blocked', 'blocked_reason', 'internal_notes',
-            'external_notes'
+            'external_notes',
+            'featured_artists', 'all_artists', 'display_artists'
         ]
         read_only_fields = [
             'checklist_progress', 'is_overdue', 'days_in_current_stage',
@@ -568,6 +623,16 @@ class SongDetailSerializer(serializers.ModelSerializer):
                 'display_name': obj.artist.display_name
             }
         return None
+
+    def get_current_stage(self, obj):
+        """Return stage, defaulting to 'draft' if null."""
+        return obj.stage or 'draft'
+
+    def get_stage_display(self, obj):
+        """Return stage display name, defaulting to 'Draft' if null."""
+        if obj.stage:
+            return obj.get_stage_display()
+        return 'Draft'
 
     def get_created_by(self, obj):
         """Return created_by as nested object with id, email, and full_name."""
@@ -587,38 +652,122 @@ class SongDetailSerializer(serializers.ModelSerializer):
         """Count of releases linked to this song."""
         return obj.releases.count()
 
+    def get_work(self, obj):
+        """Return work as nested object with id and iswc."""
+        if obj.work:
+            # Get ISWC from identifiers
+            iswc = None
+            try:
+                from identity.models import Identifier
+                identifier = Identifier.objects.filter(
+                    owner_type='catalog.work',
+                    owner_id=obj.work.id,
+                    scheme='iswc'
+                ).first()
+                if identifier:
+                    iswc = identifier.value
+            except:
+                pass
+
+            return {
+                'id': obj.work.id,
+                'iswc': iswc
+            }
+        return None
+
+    def get_recording(self, obj):
+        """Return recording as nested object with id and isrc."""
+        if hasattr(obj, 'recording') and obj.recording:
+            # Get ISRC from identifiers
+            isrc = None
+            try:
+                from identity.models import Identifier
+                identifier = Identifier.objects.filter(
+                    owner_type='catalog.recording',
+                    owner_id=obj.recording.id,
+                    scheme='isrc'
+                ).first()
+                if identifier:
+                    isrc = identifier.value
+            except:
+                pass
+
+            return {
+                'id': obj.recording.id,
+                'isrc': isrc
+            }
+        return None
+
+    def get_release(self, obj):
+        """Return release as nested object with id and upc."""
+        if hasattr(obj, 'release') and obj.release:
+            # Get UPC from identifiers
+            upc = None
+            try:
+                from identity.models import Identifier
+                identifier = Identifier.objects.filter(
+                    owner_type='catalog.release',
+                    owner_id=obj.release.id,
+                    scheme='upc'
+                ).first()
+                if identifier:
+                    upc = identifier.value
+            except:
+                pass
+
+            return {
+                'id': obj.release.id,
+                'upc': upc
+            }
+        return None
+
+    def get_all_artists(self, obj):
+        """Return all artists (primary + featured) as list."""
+        return obj.get_all_artists()
+
     def get_fields(self):
         """
         Dynamically remove fields based on user's department permissions.
 
         Permission rules:
-        - Marketing: Hide work, splits (will be hidden via separate endpoints)
-        - Digital: Hide splits
-        - Sales: Hide splits
+        - Marketing: Hide work, work_title, internal_notes, blocked info
+        - Digital: Hide internal_notes, blocked info
+        - Sales: Hide internal_notes, blocked info
         """
         fields = super().get_fields()
         request = self.context.get('request')
 
-        if request and request.user and hasattr(request.user, 'profile'):
-            user_profile = request.user.profile
+        if not request or not request.user or not hasattr(request.user, 'profile'):
+            return fields
 
-            # Admin can see everything
-            if user_profile.role.level >= 1000:
-                return fields
+        user_profile = request.user.profile
 
-            if not user_profile.department:
-                return fields
+        # Admin can see everything
+        if user_profile.role.level >= 1000:
+            return fields
 
-            user_dept = user_profile.department.code.lower()
+        if not user_profile.department:
+            return fields
 
-            # Marketing sees limited info
-            if user_dept == 'marketing':
-                # Marketing cannot see Work details - they only work on assets
-                # Work data will be restricted in the viewset's get_queryset
-                pass
+        user_dept = user_profile.department.code.lower()
 
-            # Digital and Sales cannot see splits (handled in separate endpoints)
-            # No field removal needed here as splits are accessed via nested routes
+        # Marketing sees limited info - no Work details, no internal notes
+        if user_dept == 'marketing':
+            fields_to_hide = ['work', 'work_title', 'internal_notes', 'is_blocked', 'blocked_reason']
+            for field_name in fields_to_hide:
+                fields.pop(field_name, None)
+
+        # Digital cannot see internal notes or blocking info
+        elif user_dept == 'digital':
+            fields_to_hide = ['internal_notes', 'is_blocked', 'blocked_reason']
+            for field_name in fields_to_hide:
+                fields.pop(field_name, None)
+
+        # Sales cannot see internal notes or blocking info
+        elif user_dept == 'sales':
+            fields_to_hide = ['internal_notes', 'is_blocked', 'blocked_reason']
+            for field_name in fields_to_hide:
+                fields.pop(field_name, None)
 
         return fields
 
@@ -662,3 +811,57 @@ class SongCreateUpdateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+class AlertConfigurationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Alert Configuration settings.
+
+    Allows admins to manage alert configurations from the frontend.
+    """
+
+    alert_type_display = serializers.CharField(
+        source='get_alert_type_display',
+        read_only=True
+    )
+
+    priority_display = serializers.CharField(
+        source='get_priority_display',
+        read_only=True
+    )
+
+    updated_by_name = serializers.CharField(
+        source='updated_by.get_full_name',
+        read_only=True,
+        allow_null=True
+    )
+
+    class Meta:
+        model = AlertConfiguration
+        fields = [
+            'id', 'alert_type', 'alert_type_display', 'enabled',
+            'days_threshold', 'schedule_description',
+            'notify_assigned_user', 'notify_department_managers', 'notify_song_creator',
+            'priority', 'priority_display',
+            'title_template', 'message_template',
+            'created_at', 'updated_at', 'updated_by', 'updated_by_name'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'updated_by', 'updated_by_name']
+
+    def validate_days_threshold(self, value):
+        """Ensure days_threshold is positive if provided."""
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Days threshold must be a positive number")
+        return value
+
+    def validate_title_template(self, value):
+        """Ensure title template is not empty."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title template cannot be empty")
+        return value
+
+    def validate_message_template(self, value):
+        """Ensure message template is not empty."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Message template cannot be empty")
+        return value

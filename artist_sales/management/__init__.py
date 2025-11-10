@@ -1,1 +1,1 @@
-# Management module for artist_sales
+# Management commands package

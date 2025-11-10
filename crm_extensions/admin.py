@@ -3,7 +3,10 @@ from django.utils.html import format_html
 from django.utils import timezone
 from django.db.models import Count
 from django.core.validators import MaxValueValidator
-from .models import Task, Activity, CampaignMetrics
+from .models import (
+    Task, Activity, CampaignMetrics,
+    FlowTrigger, ManualTrigger
+)
 
 
 @admin.register(Task)
@@ -368,3 +371,61 @@ class CampaignMetricsAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('campaign')
+
+
+@admin.register(FlowTrigger)
+class FlowTriggerAdmin(admin.ModelAdmin):
+    list_display = ['name', 'trigger_entity_type', 'trigger_event', 'creates_task', 'is_active']
+    list_filter = ['trigger_entity_type', 'trigger_event', 'is_active', 'creates_task']
+    search_fields = ['name', 'description', 'trigger_entity_type']
+    readonly_fields = ['created_at', 'updated_at']
+
+    fieldsets = (
+        ('Trigger Information', {
+            'fields': ('name', 'description')
+        }),
+        ('Trigger Configuration', {
+            'fields': ('trigger_entity_type', 'trigger_event', 'trigger_conditions')
+        }),
+        ('Task Creation', {
+            'fields': ('creates_task', 'task_config')
+        }),
+        ('Configuration', {
+            'fields': ('is_active',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(ManualTrigger)
+class ManualTriggerAdmin(admin.ModelAdmin):
+    list_display = ['button_label', 'entity_type', 'context', 'action_type', 'button_style', 'is_active']
+    list_filter = ['entity_type', 'action_type', 'button_style', 'is_active']
+    search_fields = ['name', 'button_label', 'entity_type', 'context']
+    readonly_fields = ['created_at', 'updated_at']
+    filter_horizontal = ['visible_to_departments']
+
+    fieldsets = (
+        ('Trigger Information', {
+            'fields': ('name', 'button_label', 'button_style')
+        }),
+        ('Context', {
+            'fields': ('entity_type', 'context')
+        }),
+        ('Action Configuration', {
+            'fields': ('action_type', 'action_config')
+        }),
+        ('Permissions', {
+            'fields': ('visible_to_departments', 'required_permissions')
+        }),
+        ('Configuration', {
+            'fields': ('is_active',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )

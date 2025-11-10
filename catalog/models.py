@@ -823,6 +823,15 @@ class Song(models.Model):
         help_text="Associated releases"
     )
 
+    # Featured artists (M2M through SongArtist)
+    featured_artists = models.ManyToManyField(
+        'identity.Entity',
+        through='SongArtist',
+        related_name='featured_songs',
+        blank=True,
+        help_text="Featured artists with roles"
+    )
+
     # ============ OWNERSHIP ============
     created_by = models.ForeignKey(
         User,
@@ -935,7 +944,7 @@ class Song(models.Model):
             return (False, "User has no profile")
 
         # Check if transition is valid
-        current_stage = self.stage
+        current_stage = self.stage or 'draft'  # Treat null stage as draft
         VALID_TRANSITIONS = {
             'draft': ['publishing', 'archived'],
             'publishing': ['label_recording', 'archived'],
@@ -965,7 +974,8 @@ class Song(models.Model):
         Returns:
             QuerySet: SongChecklistItem queryset filtered by current stage
         """
-        return self.checklist_items.filter(stage=self.stage)
+        current_stage = self.stage or 'draft'  # Treat null stage as draft
+        return self.checklist_items.filter(stage=current_stage)
 
     def calculate_checklist_progress(self):
         """
@@ -1000,6 +1010,147 @@ class Song(models.Model):
 
         self.save()
 
+    def get_all_artists(self):
+        """
+        Return list of all artists (primary + featured).
+
+        Returns:
+            list: List of dicts with artist info {id, name, role, is_primary, order}
+        """
+        artists = []
+
+        # Add primary artist first
+        if self.artist:
+            artists.append({
+                'id': self.artist.id,
+                'name': self.artist.display_name,
+                'role': 'primary',
+                'is_primary': True,
+                'order': -1,
+            })
+
+        # Add featured artists
+        for credit in self.artist_credits.select_related('artist').all():
+            artists.append({
+                'id': credit.artist.id,
+                'name': credit.artist.display_name,
+                'role': credit.role,
+                'is_primary': False,
+                'order': credit.order,
+            })
+
+        # Sort: primary first, then by order
+        return sorted(artists, key=lambda x: (not x['is_primary'], x['order']))
+
+    def add_featured_artist(self, artist, role='featured', order=None):
+        """
+        Add a featured artist to the song.
+
+        Args:
+            artist: Entity instance (artist)
+            role: Artist role (featured, remixer, producer, etc.)
+            order: Display order (None = auto-increment)
+
+        Returns:
+            SongArtist: Created artist credit instance
+        """
+        if order is None:
+            # Auto-increment: get max order + 1
+            max_order = self.artist_credits.aggregate(
+                models.Max('order')
+            )['order__max'] or 0
+            order = max_order + 1
+
+        return SongArtist.objects.create(
+            song=self,
+            artist=artist,
+            role=role,
+            order=order
+        )
+
+    @property
+    def display_artists(self):
+        """
+        Return formatted artist string.
+
+        Examples:
+            "Artist A" (only primary)
+            "Artist A feat. Artist B" (primary + 1 featured)
+            "Artist A feat. Artist B, Artist C" (primary + 2 featured)
+
+        Returns:
+            str: Formatted artist string
+        """
+        all_artists = self.get_all_artists()
+
+        if not all_artists:
+            return "Unknown Artist"
+
+        primary = next((a for a in all_artists if a['is_primary']), None)
+        featured = [a for a in all_artists if not a['is_primary']]
+
+        if not featured:
+            return primary['name'] if primary else "Unknown Artist"
+
+        primary_name = primary['name'] if primary else all_artists[0]['name']
+        featured_names = ', '.join(a['name'] for a in featured)
+        return f"{primary_name} feat. {featured_names}"
+
+
+class SongArtist(models.Model):
+    """
+    Through model for featured artists on songs.
+    Allows songs to have multiple artists with roles and ordering.
+    """
+
+    ROLE_CHOICES = [
+        ('featured', 'Featured Artist'),
+        ('remixer', 'Remixer'),
+        ('producer', 'Producer'),
+        ('composer', 'Composer'),
+        ('featuring', 'Featuring'),
+    ]
+
+    song = models.ForeignKey(
+        Song,
+        on_delete=models.CASCADE,
+        related_name='artist_credits',
+        help_text="Song this artist credit belongs to"
+    )
+
+    artist = models.ForeignKey(
+        'identity.Entity',
+        on_delete=models.CASCADE,
+        related_name='song_credits',
+        help_text="Artist entity"
+    )
+
+    role = models.CharField(
+        max_length=50,
+        choices=ROLE_CHOICES,
+        default='featured',
+        help_text="Artist role on this song"
+    )
+
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Display order for featured artist billing (0 = first)"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+        unique_together = ['song', 'artist', 'role']
+        verbose_name = "Song Artist"
+        verbose_name_plural = "Song Artists"
+        indexes = [
+            models.Index(fields=['song', 'order']),
+        ]
+
+    def __str__(self):
+        return f"{self.artist.name} - {self.get_role_display()} on {self.song.title}"
+
 
 class SongChecklistItem(models.Model):
     """
@@ -1023,6 +1174,15 @@ class SongChecklistItem(models.Model):
         on_delete=models.CASCADE,
         related_name='checklist_items',
         help_text="Associated song"
+    )
+
+    recording = models.ForeignKey(
+        'Recording',
+        on_delete=models.CASCADE,
+        related_name='checklist_items',
+        null=True,
+        blank=True,
+        help_text="Associated recording (if this is a recording-specific checklist item)"
     )
 
     # ============ CHECKLIST DEFINITION ============
@@ -1640,3 +1800,103 @@ class SongAlert(models.Model):
     def __str__(self):
         target = self.target_user or self.target_department or "No target"
         return f"{self.song.title} - {self.get_alert_type_display()} → {target}"
+
+
+class AlertConfiguration(models.Model):
+    """
+    Configurable settings for Song Workflow alerts.
+
+    Allows admins to control when and how alerts are generated,
+    without needing to modify code or Celery schedules.
+    """
+
+    ALERT_TYPE_CHOICES = [
+        ('overdue', 'Overdue Songs'),
+        ('deadline_approaching', 'Deadline Approaching'),
+        ('release_approaching', 'Release Approaching'),
+        ('checklist_incomplete', 'Checklist Incomplete'),
+    ]
+
+    alert_type = models.CharField(
+        max_length=50,
+        choices=ALERT_TYPE_CHOICES,
+        unique=True,
+        help_text="Type of alert to configure"
+    )
+
+    enabled = models.BooleanField(
+        default=True,
+        help_text="Enable or disable this alert type"
+    )
+
+    # Timing configuration
+    days_threshold = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Number of days threshold (e.g., 2 for 'deadline in 2 days', 7 for 'release in 7 days')"
+    )
+
+    schedule_description = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Human-readable schedule description (e.g., 'Daily at midnight')"
+    )
+
+    # Notification targets
+    notify_assigned_user = models.BooleanField(
+        default=True,
+        help_text="Send alert to the assigned user"
+    )
+
+    notify_department_managers = models.BooleanField(
+        default=True,
+        help_text="Send alert to department managers"
+    )
+
+    notify_song_creator = models.BooleanField(
+        default=False,
+        help_text="Send alert to song creator"
+    )
+
+    # Alert properties
+    priority = models.CharField(
+        max_length=20,
+        choices=[
+            ('info', 'Info'),
+            ('important', 'Important'),
+            ('urgent', 'Urgent'),
+        ],
+        default='important',
+        help_text="Alert priority level"
+    )
+
+    # Customizable message templates
+    title_template = models.CharField(
+        max_length=255,
+        help_text="Alert title template (supports {song_title}, {days}, {deadline}, etc.)"
+    )
+
+    message_template = models.TextField(
+        help_text="Alert message template (supports same variables as title)"
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='alert_configs_updated',
+        help_text="Last user who updated this configuration"
+    )
+
+    class Meta:
+        ordering = ['alert_type']
+        verbose_name = "Alert Configuration"
+        verbose_name_plural = "Alert Configurations"
+
+    def __str__(self):
+        status = "Enabled" if self.enabled else "Disabled"
+        return f"{self.get_alert_type_display()} - {status}"

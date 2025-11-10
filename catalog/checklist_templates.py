@@ -66,16 +66,21 @@ PUBLISHING_CHECKLIST_TEMPLATE = [
 ]
 
 # Label Recording Stage Checklist
+# Song-level checklist for label_recording stage (simplified)
 LABEL_RECORDING_CHECKLIST_TEMPLATE = [
     {
         'category': 'Recording Setup',
         'item_name': 'Recording entity created',
-        'description': 'Create a Recording and link it to this song',
+        'description': 'Create at least one Recording and link it to this song',
         'required': True,
         'validation_type': 'auto_entity_exists',
         'validation_rule': {'entity': 'recording'},
         'order': 1,
     },
+]
+
+# Per-recording checklist template (created for each recording)
+RECORDING_CHECKLIST_TEMPLATE = [
     {
         'category': 'Recording Setup',
         'item_name': 'ISRC assigned',
@@ -83,7 +88,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'required': True,
         'validation_type': 'auto_field_exists',
         'validation_rule': {'entity': 'recording', 'field': 'isrc'},
-        'order': 2,
+        'order': 1,
     },
     {
         'category': 'Audio Files',
@@ -93,7 +98,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'validation_type': 'auto_file_exists',
         'validation_rule': {'entity': 'recording', 'file_field': 'audio_master'},
         'help_text': 'Must be WAV or FLAC, minimum 16-bit/44.1kHz',
-        'order': 3,
+        'order': 2,
     },
     {
         'category': 'Audio Files',
@@ -102,7 +107,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'required': False,
         'validation_type': 'auto_file_exists',
         'validation_rule': {'entity': 'recording', 'file_field': 'audio_instrumental'},
-        'order': 4,
+        'order': 3,
     },
     {
         'category': 'Credits',
@@ -111,7 +116,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'required': True,
         'validation_type': 'auto_count_minimum',
         'validation_rule': {'entity': 'recording_credits', 'min_count': 1},
-        'order': 5,
+        'order': 4,
     },
     {
         'category': 'Master Rights',
@@ -120,7 +125,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'required': True,
         'validation_type': 'auto_split_validated',
         'validation_rule': {'entity': 'recording', 'split_type': 'master'},
-        'order': 6,
+        'order': 5,
     },
     {
         'category': 'Legal',
@@ -128,7 +133,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'description': 'Upload signed contracts with producers and featured artists',
         'required': True,
         'validation_type': 'manual',
-        'order': 7,
+        'order': 6,
     },
     {
         'category': 'Legal',
@@ -137,7 +142,7 @@ LABEL_RECORDING_CHECKLIST_TEMPLATE = [
         'required': True,
         'validation_type': 'manual',
         'help_text': 'Check for any samples or interpolations that need clearance',
-        'order': 8,
+        'order': 7,
     },
 ]
 

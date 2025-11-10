@@ -27,3 +27,6 @@ class ContractsConfig(AppConfig):
             WebhookEvent,
             include_fields=['processed', 'verified_with_api', 'error_message']
         )
+
+        # Import signals to register handlers
+        from . import signals

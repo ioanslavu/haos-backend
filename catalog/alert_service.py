@@ -2,12 +2,28 @@
 Alert generation service for Song Workflow system.
 
 Creates in-app notifications when workflow events occur.
+Now supports configuration from database via AlertConfiguration model.
 """
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+
+
+def get_alert_config(alert_type):
+    """
+    Get alert configuration from database.
+
+    Returns None if alert type is disabled or doesn't exist.
+    """
+    from catalog.models import AlertConfiguration
+
+    try:
+        config = AlertConfiguration.objects.get(alert_type=alert_type, enabled=True)
+        return config
+    except AlertConfiguration.DoesNotExist:
+        return None
 
 
 class SongAlertService:
@@ -78,6 +94,7 @@ class SongAlertService:
         Creates alert for overdue songs.
 
         Should be called by a daily cron job to check for overdue songs.
+        Uses configuration from AlertConfiguration model.
 
         Args:
             song: Song instance
@@ -85,57 +102,78 @@ class SongAlertService:
         Returns:
             List of SongAlert instances created
         """
-        # This requires SongAlert model
-        # Placeholder implementation:
+        from catalog.models import SongAlert
 
-        # from catalog.models import SongAlert
-        # from api.models import User
-        #
-        # alerts = []
-        #
-        # if not song.stage_deadline:
-        #     return alerts
-        #
-        # if song.stage_deadline >= timezone.now().date():
-        #     return alerts  # Not overdue yet
-        #
-        # # Alert assigned user
-        # if song.assigned_user:
-        #     alert = SongAlert.objects.create(
-        #         song=song,
-        #         alert_type='overdue',
-        #         target_user=song.assigned_user,
-        #         title=f'OVERDUE: {song.title}',
-        #         message=f'"{song.title}" is overdue in {song.stage} stage. Deadline was {song.stage_deadline}.',
-        #         action_url=f'/songs/{song.id}/',
-        #         action_label='View Song',
-        #         priority='urgent'
-        #     )
-        #     alerts.append(alert)
-        #
-        # # Also alert department managers
-        # if song.assigned_department:
-        #     dept_managers = User.objects.filter(
-        #         profile__department=song.assigned_department,
-        #         profile__role__level__gte=300  # Manager level
-        #     )
-        #
-        #     for manager in dept_managers:
-        #         alert = SongAlert.objects.create(
-        #             song=song,
-        #             alert_type='overdue',
-        #             target_user=manager,
-        #             title=f'Team Song Overdue: {song.title}',
-        #             message=f'"{song.title}" assigned to {song.assigned_user.get_full_name() if song.assigned_user else "unassigned"} is overdue.',
-        #             action_url=f'/songs/{song.id}/',
-        #             action_label='View Song',
-        #             priority='urgent'
-        #         )
-        #         alerts.append(alert)
-        #
-        # return alerts
+        # Check if alert type is enabled
+        config = get_alert_config('overdue')
+        if not config:
+            return []  # Alert disabled
 
-        return []
+        alerts = []
+
+        if not song.stage_deadline:
+            return alerts
+
+        if song.stage_deadline >= timezone.now().date():
+            return alerts  # Not overdue yet
+
+        # Prepare template variables
+        template_vars = {
+            'song_title': song.title,
+            'stage': song.stage,
+            'deadline': song.stage_deadline,
+            'assigned_user': song.assigned_user.get_full_name() if song.assigned_user else 'unassigned'
+        }
+
+        # Alert assigned user
+        if song.assigned_user and config.notify_assigned_user:
+            alert = SongAlert.objects.create(
+                song=song,
+                alert_type='overdue',
+                target_user=song.assigned_user,
+                title=config.title_template.format(**template_vars),
+                message=config.message_template.format(**template_vars),
+                action_url=f'/songs/{song.id}/',
+                action_label='View Song',
+                priority=config.priority
+            )
+            alerts.append(alert)
+
+        # Also alert department managers
+        if song.assigned_department and config.notify_department_managers:
+            dept_managers = User.objects.filter(
+                profile__department=song.assigned_department,
+                profile__role__level__gte=300  # Manager level
+            )
+
+            for manager in dept_managers:
+                alert = SongAlert.objects.create(
+                    song=song,
+                    alert_type='overdue',
+                    target_user=manager,
+                    title=config.title_template.format(**template_vars),
+                    message=config.message_template.format(**template_vars),
+                    action_url=f'/songs/{song.id}/',
+                    action_label='View Song',
+                    priority=config.priority
+                )
+                alerts.append(alert)
+
+        # Alert song creator if configured
+        if song.created_by and config.notify_song_creator and song.created_by != song.assigned_user:
+            alert = SongAlert.objects.create(
+                song=song,
+                alert_type='overdue',
+                target_user=song.created_by,
+                title=config.title_template.format(**template_vars),
+                message=config.message_template.format(**template_vars),
+                action_url=f'/songs/{song.id}/',
+                action_label='View Song',
+                priority=config.priority
+            )
+            alerts.append(alert)
+
+        return alerts
 
     @staticmethod
     def create_send_to_digital_alert(song, user):
@@ -268,59 +306,53 @@ class SongAlertService:
         Returns:
             List of SongAlert instances created
         """
-        # Placeholder implementation:
+        from catalog.models import SongAlert
 
-        # from catalog.models import SongAlert
-        # from datetime import timedelta
-        # from api.models import User
-        #
-        # alerts = []
-        #
-        # if not song.stage_deadline:
-        #     return alerts
-        #
-        # days_until_deadline = (song.stage_deadline - timezone.now().date()).days
-        #
-        # if days_until_deadline != 2:
-        #     return alerts  # Only alert 2 days before
-        #
-        # # Alert assigned user
-        # if song.assigned_user:
-        #     alert = SongAlert.objects.create(
-        #         song=song,
-        #         alert_type='deadline_approaching',
-        #         target_user=song.assigned_user,
-        #         title=f'Deadline Approaching: {song.title}',
-        #         message=f'"{song.title}" is due in 2 days ({song.stage_deadline}). Please complete checklist items.',
-        #         action_url=f'/songs/{song.id}/',
-        #         action_label='View Song',
-        #         priority='important'
-        #     )
-        #     alerts.append(alert)
-        #
-        # # Also alert department managers
-        # if song.assigned_department:
-        #     dept_managers = User.objects.filter(
-        #         profile__department=song.assigned_department,
-        #         profile__role__level__gte=300  # Manager level
-        #     )
-        #
-        #     for manager in dept_managers:
-        #         alert = SongAlert.objects.create(
-        #             song=song,
-        #             alert_type='deadline_approaching',
-        #             target_user=manager,
-        #             title=f'Team Song Deadline: {song.title}',
-        #             message=f'"{song.title}" assigned to {song.assigned_user.get_full_name() if song.assigned_user else "unassigned"} is due in 2 days.',
-        #             action_url=f'/songs/{song.id}/',
-        #             action_label='View Song',
-        #             priority='important'
-        #         )
-        #         alerts.append(alert)
-        #
-        # return alerts
+        alerts = []
 
-        return []
+        if not song.stage_deadline:
+            return alerts
+
+        days_until_deadline = (song.stage_deadline - timezone.now().date()).days
+
+        if days_until_deadline != 2:
+            return alerts  # Only alert 2 days before
+
+        # Alert assigned user
+        if song.assigned_user:
+            alert = SongAlert.objects.create(
+                song=song,
+                alert_type='deadline_approaching',
+                target_user=song.assigned_user,
+                title=f'Deadline Approaching: {song.title}',
+                message=f'"{song.title}" is due in 2 days ({song.stage_deadline}). Please complete checklist items.',
+                action_url=f'/songs/{song.id}/',
+                action_label='View Song',
+                priority='important'
+            )
+            alerts.append(alert)
+
+        # Also alert department managers
+        if song.assigned_department:
+            dept_managers = User.objects.filter(
+                profile__department=song.assigned_department,
+                profile__role__level__gte=300  # Manager level
+            )
+
+            for manager in dept_managers:
+                alert = SongAlert.objects.create(
+                    song=song,
+                    alert_type='deadline_approaching',
+                    target_user=manager,
+                    title=f'Team Song Deadline: {song.title}',
+                    message=f'"{song.title}" assigned to {song.assigned_user.get_full_name() if song.assigned_user else "unassigned"} is due in 2 days.',
+                    action_url=f'/songs/{song.id}/',
+                    action_label='View Song',
+                    priority='important'
+                )
+                alerts.append(alert)
+
+        return alerts
 
     @staticmethod
     def create_checklist_incomplete_alert(song, item):
@@ -334,27 +366,23 @@ class SongAlertService:
         Returns:
             SongAlert instance
         """
-        # Placeholder implementation:
+        from catalog.models import SongAlert
 
-        # from catalog.models import SongAlert
-        #
-        # if not item.assigned_to:
-        #     return None
-        #
-        # alert = SongAlert.objects.create(
-        #     song=song,
-        #     alert_type='checklist_incomplete',
-        #     target_user=item.assigned_to,
-        #     title=f'Incomplete Checklist Item: {song.title}',
-        #     message=f'The checklist item "{item.item_name}" for "{song.title}" has been incomplete for 3+ days. Please complete it.',
-        #     action_url=f'/songs/{song.id}/',
-        #     action_label='View Song',
-        #     priority='important'
-        # )
-        #
-        # return alert
+        if not item.assigned_to:
+            return None
 
-        return None
+        alert = SongAlert.objects.create(
+            song=song,
+            alert_type='checklist_incomplete',
+            target_user=item.assigned_to,
+            title=f'Incomplete Checklist Item: {song.title}',
+            message=f'The checklist item "{item.item_name}" for "{song.title}" has been incomplete for 3+ days. Please complete it.',
+            action_url=f'/songs/{song.id}/',
+            action_label='View Song',
+            priority='important'
+        )
+
+        return alert
 
     @staticmethod
     def create_blocking_issue_alert(song, user, reason):
@@ -369,50 +397,45 @@ class SongAlertService:
         Returns:
             List of SongAlert instances created
         """
-        # Placeholder implementation:
+        from catalog.models import SongAlert
 
-        # from catalog.models import SongAlert
-        # from api.models import User
-        #
-        # alerts = []
-        #
-        # # Alert department managers
-        # if song.assigned_department:
-        #     dept_managers = User.objects.filter(
-        #         profile__department=song.assigned_department,
-        #         profile__role__level__gte=300  # Manager level
-        #     )
-        #
-        #     for manager in dept_managers:
-        #         alert = SongAlert.objects.create(
-        #             song=song,
-        #             alert_type='blocking_issue',
-        #             target_user=manager,
-        #             title=f'BLOCKED: {song.title}',
-        #             message=f'{user.get_full_name()} flagged "{song.title}" as blocked. Reason: {reason}',
-        #             action_url=f'/songs/{song.id}/',
-        #             action_label='View Song',
-        #             priority='urgent'
-        #         )
-        #         alerts.append(alert)
-        #
-        # # Alert song creator
-        # if song.created_by and song.created_by != user:
-        #     alert = SongAlert.objects.create(
-        #         song=song,
-        #         alert_type='blocking_issue',
-        #         target_user=song.created_by,
-        #         title=f'Song Blocked: {song.title}',
-        #         message=f'Your song "{song.title}" has been flagged as blocked. Reason: {reason}',
-        #         action_url=f'/songs/{song.id}/',
-        #         action_label='View Song',
-        #         priority='urgent'
-        #     )
-        #     alerts.append(alert)
-        #
-        # return alerts
+        alerts = []
 
-        return []
+        # Alert department managers
+        if song.assigned_department:
+            dept_managers = User.objects.filter(
+                profile__department=song.assigned_department,
+                profile__role__level__gte=300  # Manager level
+            )
+
+            for manager in dept_managers:
+                alert = SongAlert.objects.create(
+                    song=song,
+                    alert_type='blocking_issue',
+                    target_user=manager,
+                    title=f'BLOCKED: {song.title}',
+                    message=f'{user.get_full_name()} flagged "{song.title}" as blocked. Reason: {reason}',
+                    action_url=f'/songs/{song.id}/',
+                    action_label='View Song',
+                    priority='urgent'
+                )
+                alerts.append(alert)
+
+        # Alert song creator
+        if song.created_by and song.created_by != user:
+            alert = SongAlert.objects.create(
+                song=song,
+                alert_type='blocking_issue',
+                target_user=song.created_by,
+                title=f'Song Blocked: {song.title}',
+                message=f'Your song "{song.title}" has been flagged as blocked. Reason: {reason}',
+                action_url=f'/songs/{song.id}/',
+                action_label='View Song',
+                priority='urgent'
+            )
+            alerts.append(alert)
+
+        return alerts
 
     @staticmethod
     def create_sales_pitch_alert(song, user, pitched_to):
@@ -460,58 +483,54 @@ class SongAlertService:
         Returns:
             List of SongAlert instances created
         """
-        # Placeholder implementation:
+        from catalog.models import SongAlert
+        from api.models import Department
 
-        # from catalog.models import SongAlert
-        # from api.models import Department, User
-        #
-        # alerts = []
-        #
-        # if not song.target_release_date:
-        #     return alerts
-        #
-        # days_until_release = (song.target_release_date - timezone.now().date()).days
-        #
-        # if days_until_release != 7:
-        #     return alerts  # Only alert 7 days before
-        #
-        # # Alert Digital department
-        # try:
-        #     digital_dept = Department.objects.get(code='digital')
-        #     alert = SongAlert.objects.create(
-        #         song=song,
-        #         alert_type='release_approaching',
-        #         target_department=digital_dept,
-        #         title=f'Release in 7 Days: {song.title}',
-        #         message=f'"{song.title}" is scheduled for release in 7 days ({song.target_release_date}). Ensure all distribution is complete.',
-        #         action_url=f'/songs/{song.id}/',
-        #         action_label='View Song',
-        #         priority='important'
-        #     )
-        #     alerts.append(alert)
-        # except Department.DoesNotExist:
-        #     pass
-        #
-        # # Alert Label department
-        # try:
-        #     label_dept = Department.objects.get(code='label')
-        #     alert = SongAlert.objects.create(
-        #         song=song,
-        #         alert_type='release_approaching',
-        #         target_department=label_dept,
-        #         title=f'Release in 7 Days: {song.title}',
-        #         message=f'"{song.title}" is scheduled for release in 7 days ({song.target_release_date}).',
-        #         action_url=f'/songs/{song.id}/',
-        #         action_label='View Song',
-        #         priority='important'
-        #     )
-        #     alerts.append(alert)
-        # except Department.DoesNotExist:
-        #     pass
-        #
-        # return alerts
+        alerts = []
 
-        return []
+        if not song.target_release_date:
+            return alerts
+
+        days_until_release = (song.target_release_date - timezone.now().date()).days
+
+        if days_until_release != 7:
+            return alerts  # Only alert 7 days before
+
+        # Alert Digital department
+        try:
+            digital_dept = Department.objects.get(code='digital')
+            alert = SongAlert.objects.create(
+                song=song,
+                alert_type='release_approaching',
+                target_department=digital_dept,
+                title=f'Release in 7 Days: {song.title}',
+                message=f'"{song.title}" is scheduled for release in 7 days ({song.target_release_date}). Ensure all distribution is complete.',
+                action_url=f'/songs/{song.id}/',
+                action_label='View Song',
+                priority='important'
+            )
+            alerts.append(alert)
+        except Department.DoesNotExist:
+            pass
+
+        # Alert Label department
+        try:
+            label_dept = Department.objects.get(code='label')
+            alert = SongAlert.objects.create(
+                song=song,
+                alert_type='release_approaching',
+                target_department=label_dept,
+                title=f'Release in 7 Days: {song.title}',
+                message=f'"{song.title}" is scheduled for release in 7 days ({song.target_release_date}).',
+                action_url=f'/songs/{song.id}/',
+                action_label='View Song',
+                priority='important'
+            )
+            alerts.append(alert)
+        except Department.DoesNotExist:
+            pass
+
+        return alerts
 
 
 # Convenience function for bulk operations
@@ -524,57 +543,51 @@ def create_daily_alerts():
     Returns:
         Dictionary with summary of alerts created
     """
-    # Placeholder implementation:
+    from catalog.models import Song
+    from datetime import timedelta
 
-    # from catalog.models import Song
-    # from datetime import timedelta
-    #
-    # summary = {
-    #     'overdue_alerts': 0,
-    #     'deadline_approaching_alerts': 0,
-    #     'release_approaching_alerts': 0,
-    #     'total_alerts': 0
-    # }
-    #
-    # # Find overdue songs
-    # overdue_songs = Song.objects.filter(
-    #     stage_deadline__lt=timezone.now().date(),
-    #     stage__in=['publishing', 'label_recording', 'marketing_assets', 'label_review', 'ready_for_digital', 'digital_distribution']
-    # )
-    #
-    # for song in overdue_songs:
-    #     alerts = SongAlertService.create_overdue_alert(song)
-    #     summary['overdue_alerts'] += len(alerts)
-    #     summary['total_alerts'] += len(alerts)
-    #
-    # # Find songs with approaching deadlines (2 days)
-    # approaching_deadline = timezone.now().date() + timedelta(days=2)
-    # approaching_songs = Song.objects.filter(
-    #     stage_deadline=approaching_deadline,
-    #     stage__in=['publishing', 'label_recording', 'marketing_assets', 'label_review', 'ready_for_digital', 'digital_distribution']
-    # )
-    #
-    # for song in approaching_songs:
-    #     alerts = SongAlertService.create_deadline_approaching_alert(song)
-    #     summary['deadline_approaching_alerts'] += len(alerts)
-    #     summary['total_alerts'] += len(alerts)
-    #
-    # # Find songs with approaching release dates (7 days)
-    # approaching_release = timezone.now().date() + timedelta(days=7)
-    # release_songs = Song.objects.filter(
-    #     target_release_date=approaching_release
-    # )
-    #
-    # for song in release_songs:
-    #     alerts = SongAlertService.create_release_approaching_alert(song)
-    #     summary['release_approaching_alerts'] += len(alerts)
-    #     summary['total_alerts'] += len(alerts)
-    #
-    # return summary
-
-    return {
+    summary = {
         'overdue_alerts': 0,
         'deadline_approaching_alerts': 0,
         'release_approaching_alerts': 0,
         'total_alerts': 0
     }
+
+    # Find overdue songs
+    overdue_songs = Song.objects.filter(
+        stage_deadline__lt=timezone.now().date(),
+        is_archived=False,
+        stage__in=['publishing', 'label_recording', 'marketing_assets', 'label_review', 'ready_for_digital', 'digital_distribution']
+    )
+
+    for song in overdue_songs:
+        alerts = SongAlertService.create_overdue_alert(song)
+        summary['overdue_alerts'] += len(alerts)
+        summary['total_alerts'] += len(alerts)
+
+    # Find songs with approaching deadlines (2 days)
+    approaching_deadline = timezone.now().date() + timedelta(days=2)
+    approaching_songs = Song.objects.filter(
+        stage_deadline=approaching_deadline,
+        is_archived=False,
+        stage__in=['publishing', 'label_recording', 'marketing_assets', 'label_review', 'ready_for_digital', 'digital_distribution']
+    )
+
+    for song in approaching_songs:
+        alerts = SongAlertService.create_deadline_approaching_alert(song)
+        summary['deadline_approaching_alerts'] += len(alerts)
+        summary['total_alerts'] += len(alerts)
+
+    # Find songs with approaching release dates (7 days)
+    approaching_release = timezone.now().date() + timedelta(days=7)
+    release_songs = Song.objects.filter(
+        target_release_date=approaching_release,
+        is_archived=False
+    )
+
+    for song in release_songs:
+        alerts = SongAlertService.create_release_approaching_alert(song)
+        summary['release_approaching_alerts'] += len(alerts)
+        summary['total_alerts'] += len(alerts)
+
+    return summary

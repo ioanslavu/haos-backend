@@ -10,16 +10,18 @@ from django.utils import timezone
 from django.db import transaction
 from .models import (
     Work, Recording, Release, Track, Asset,
-    Song, SongChecklistItem, SongStageTransition, SongAsset, SongNote, SongAlert
+    Song, SongChecklistItem, SongStageTransition, SongAsset, SongNote, SongAlert,
+    AlertConfiguration
 )
 from .serializers import (
-    WorkListSerializer, WorkDetailSerializer,
-    RecordingListSerializer, RecordingDetailSerializer,
+    WorkListSerializer, WorkDetailSerializer, WorkCreateUpdateSerializer,
+    RecordingListSerializer, RecordingDetailSerializer, RecordingCreateUpdateSerializer,
     ReleaseListSerializer, ReleaseDetailSerializer, ReleaseCreateUpdateSerializer,
     TrackSerializer, AssetSerializer, AssetUploadSerializer,
     SongListSerializer, SongDetailSerializer, SongCreateUpdateSerializer,
     SongChecklistItemSerializer, SongStageTransitionSerializer,
-    SongAssetSerializer, SongNoteSerializer, SongAlertSerializer
+    SongAssetSerializer, SongNoteSerializer, SongAlertSerializer,
+    AlertConfigurationSerializer
 )
 from . import permissions as song_permissions
 from . import validators
@@ -130,6 +132,8 @@ class WorkViewSet(viewsets.ModelViewSet):
         """Return appropriate serializer based on action."""
         if self.action == 'list':
             return WorkListSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return WorkCreateUpdateSerializer
         return WorkDetailSerializer
 
     def get_queryset(self):
@@ -141,6 +145,14 @@ class WorkViewSet(viewsets.ModelViewSet):
                 recordings_count=Count('recordings', distinct=True)
             )
         return queryset
+
+    # DISABLED: Direct work creation is not allowed.
+    # Works must be created through song context to ensure proper linking.
+    # Use POST /api/songs/{song_id}/create-work/ instead.
+    #
+    # def create(self, request, *args, **kwargs):
+    #     """Create a new work."""
+    #     return super().create(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def add_iswc(self, request, pk=None):
@@ -286,6 +298,8 @@ class RecordingViewSet(viewsets.ModelViewSet):
         """Return appropriate serializer based on action."""
         if self.action == 'list':
             return RecordingListSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return RecordingCreateUpdateSerializer
         return RecordingDetailSerializer
 
     def get_queryset(self):
@@ -302,6 +316,14 @@ class RecordingViewSet(viewsets.ModelViewSet):
         else:
             queryset = queryset.select_related('work', 'derived_from').prefetch_related('assets')
         return queryset
+
+    # DISABLED: Direct recording creation is not allowed.
+    # Recordings must be created through song context to ensure proper linking.
+    # Use POST /api/songs/{song_id}/create-recording/ instead.
+    #
+    # def create(self, request, *args, **kwargs):
+    #     """Create a new recording."""
+    #     return super().create(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def add_isrc(self, request, pk=None):
@@ -1457,6 +1479,348 @@ class SongViewSet(viewsets.ModelViewSet):
             'release_id': release.id
         })
 
+    @action(detail=True, methods=['post'], url_path='add-recording')
+    def add_recording(self, request, pk=None):
+        """
+        Add a recording to this song.
+
+        POST /songs/{id}/add-recording/
+        {
+            "recording_id": 456
+        }
+        """
+        song = self.get_object()
+        recording_id = request.data.get('recording_id')
+
+        if not recording_id:
+            return Response(
+                {'error': 'recording_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            recording = Recording.objects.get(id=recording_id)
+        except Recording.DoesNotExist:
+            return Response(
+                {'error': 'Recording not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Add recording to song (M2M)
+        song.recordings.add(recording)
+
+        return Response({
+            'success': True,
+            'message': f'Recording "{recording.title}" added to song "{song.title}"',
+            'recording_id': recording.id
+        })
+
+    @action(detail=True, methods=['delete'], url_path='recordings/(?P<recording_id>[^/.]+)')
+    def remove_recording(self, request, pk=None, recording_id=None):
+        """
+        Remove a recording from this song.
+
+        DELETE /songs/{id}/recordings/{recording_id}/
+        """
+        song = self.get_object()
+
+        try:
+            recording = Recording.objects.get(id=recording_id)
+            song.recordings.remove(recording)
+        except Recording.DoesNotExist:
+            return Response(
+                {'error': 'Recording not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            'success': True,
+            'message': f'Recording removed from song'
+        })
+
+    @action(detail=True, methods=['post'], url_path='create-work')
+    def create_work(self, request, pk=None):
+        """
+        Create a new work and automatically link it to this song.
+
+        This replaces the two-step process of creating a work and linking it separately.
+        The work is created and linked atomically in a single transaction.
+
+        POST /songs/{id}/create-work/
+        {
+            "title": "Song Title",
+            "language": "en",
+            "genre": "Pop",
+            "lyrics": "...",
+            ... (other work fields)
+        }
+
+        Returns: WorkDetailSerializer with the created work
+        """
+        song = self.get_object()
+
+        # Check if song already has a work
+        if song.work:
+            return Response(
+                {'error': f'Song already has a linked work: "{song.work.title}"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate and create the work
+        serializer = WorkCreateUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            # Create the work
+            work = serializer.save()
+
+            # Automatically link to song
+            song.work = work
+            song.save()
+
+            # Trigger validation immediately to update checklist
+            validators.revalidate_song_checklist(song)
+
+        # Return detailed work data
+        output_serializer = WorkDetailSerializer(work)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='create-recording')
+    def create_recording(self, request, pk=None):
+        """
+        Create a new recording and automatically link it to this song.
+
+        This replaces the two-step process of creating a recording and linking it separately.
+        The recording is created and linked atomically in a single transaction.
+
+        POST /songs/{id}/create-recording/
+        {
+            "title": "Recording Title",
+            "type": "master",
+            "duration_seconds": 240,
+            "bpm": 120,
+            ... (other recording fields)
+        }
+
+        Returns: RecordingDetailSerializer with the created recording
+        """
+        song = self.get_object()
+
+        # Validate and create the recording
+        serializer = RecordingCreateUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            # Create the recording
+            recording = serializer.save()
+
+            # Automatically link to song (M2M)
+            song.recordings.add(recording)
+
+            # Create recording-specific checklist items
+            from . import checklist_templates
+            for item_template in checklist_templates.RECORDING_CHECKLIST_TEMPLATE:
+                SongChecklistItem.objects.create(
+                    song=song,
+                    recording=recording,
+                    stage=song.stage,
+                    category=item_template['category'],
+                    item_name=item_template['item_name'],
+                    description=item_template['description'],
+                    required=item_template['required'],
+                    validation_type=item_template['validation_type'],
+                    validation_rule=item_template.get('validation_rule'),
+                    help_text=item_template.get('help_text', ''),
+                    order=item_template['order'],
+                    is_complete=False,
+                )
+
+            # Trigger validation immediately to update song-level AND recording checklists
+            validators.revalidate_song_checklist(song)
+            validators.revalidate_recording_checklist(recording)
+
+        # Return detailed recording data
+        output_serializer = RecordingDetailSerializer(recording)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='add-release')
+    def add_release(self, request, pk=None):
+        """
+        Add a release to this song.
+
+        POST /songs/{id}/add-release/
+        {
+            "release_id": 789
+        }
+        """
+        song = self.get_object()
+        release_id = request.data.get('release_id')
+
+        if not release_id:
+            return Response(
+                {'error': 'release_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            release = Release.objects.get(id=release_id)
+        except Release.DoesNotExist:
+            return Response(
+                {'error': 'Release not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Add release to song (M2M)
+        song.releases.add(release)
+
+        return Response({
+            'success': True,
+            'message': f'Release "{release.title}" added to song "{song.title}"',
+            'release_id': release.id
+        })
+
+    @action(detail=True, methods=['delete'], url_path='releases/(?P<release_id>[^/.]+)')
+    def remove_release(self, request, pk=None, release_id=None):
+        """
+        Remove a release from this song.
+
+        DELETE /songs/{id}/releases/{release_id}/
+        """
+        song = self.get_object()
+
+        try:
+            release = Release.objects.get(id=release_id)
+            song.releases.remove(release)
+        except Release.DoesNotExist:
+            return Response(
+                {'error': 'Release not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            'success': True,
+            'message': f'Release removed from song'
+        })
+
+    @action(detail=True, methods=['post'], url_path='add-artist')
+    def add_artist(self, request, pk=None):
+        """
+        Add a featured artist to this song.
+
+        POST /songs/{id}/add-artist/
+        {
+            "artist_id": 123,
+            "role": "featured",  // optional, default: "featured"
+            "order": 0  // optional, auto-increments
+        }
+        """
+        song = self.get_object()
+        artist_id = request.data.get('artist_id')
+        role = request.data.get('role', 'featured')
+        order = request.data.get('order')
+
+        if not artist_id:
+            return Response(
+                {'error': 'artist_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from identity.models import Entity
+            artist = Entity.objects.get(id=artist_id)
+        except Entity.DoesNotExist:
+            return Response(
+                {'error': 'Artist not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Add featured artist
+        credit = song.add_featured_artist(artist, role=role, order=order)
+
+        return Response({
+            'success': True,
+            'message': f'Artist "{artist.name}" added to song "{song.title}"',
+            'credit_id': credit.id,
+            'artist': {
+                'id': artist.id,
+                'name': artist.name,
+                'role': credit.role,
+                'order': credit.order
+            }
+        })
+
+    @action(detail=True, methods=['delete'], url_path='artists/(?P<credit_id>[^/.]+)')
+    def remove_artist(self, request, pk=None, credit_id=None):
+        """
+        Remove a featured artist from this song.
+
+        DELETE /songs/{id}/artists/{credit_id}/
+        """
+        song = self.get_object()
+
+        try:
+            from catalog.models import SongArtist
+            credit = SongArtist.objects.get(id=credit_id, song=song)
+            credit.delete()
+        except SongArtist.DoesNotExist:
+            return Response(
+                {'error': 'Artist credit not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            'success': True,
+            'message': 'Artist removed from song'
+        })
+
+    @action(detail=True, methods=['patch'], url_path='reorder-artists')
+    def reorder_artists(self, request, pk=None):
+        """
+        Reorder featured artists.
+
+        PATCH /songs/{id}/reorder-artists/
+        {
+            "artist_credits": [
+                {"id": 1, "order": 0},
+                {"id": 2, "order": 1},
+                {"id": 3, "order": 2}
+            ]
+        }
+        """
+        song = self.get_object()
+        artist_credits = request.data.get('artist_credits', [])
+
+        if not artist_credits:
+            return Response(
+                {'error': 'artist_credits array is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from catalog.models import SongArtist
+            with transaction.atomic():
+                for credit_data in artist_credits:
+                    credit_id = credit_data.get('id')
+                    order = credit_data.get('order')
+
+                    if credit_id is None or order is None:
+                        raise ValueError('Each credit must have id and order')
+
+                    credit = SongArtist.objects.get(id=credit_id, song=song)
+                    credit.order = order
+                    credit.save()
+
+        except (ValueError, SongArtist.DoesNotExist) as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response({
+            'success': True,
+            'message': 'Artists reordered successfully'
+        })
+
 
 class SongChecklistViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -1534,11 +1898,13 @@ class SongChecklistViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def assign(self, request, song_pk=None, pk=None):
         """
-        Assign checklist item to user.
+        Assign checklist item to user and create a task.
 
         POST /songs/{song_id}/checklist/{item_id}/assign/
         {
-            "user_id": 123
+            "user_id": 123,
+            "priority": 2,  // optional, defaults to 2 (Normal)
+            "due_date": "2024-12-31"  // optional
         }
         """
         item = self.get_object()
@@ -1558,12 +1924,69 @@ class SongChecklistViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         from django.contrib.auth import get_user_model
+        from crm_extensions.models import Task, TaskAssignment
         User = get_user_model()
 
         try:
             user = User.objects.get(pk=user_id)
-            item.assigned_to = user
-            item.save()
+
+            with transaction.atomic():
+                # Update checklist item
+                item.assigned_to = user
+                item.save()
+
+                # Create task linked to checklist item
+                task_title = f"{item.stage.title()}: {item.item_name}"
+                task_description = item.description
+                if item.help_text:
+                    task_description += f"\n\nHelp: {item.help_text}"
+
+                # Determine task type based on checklist category
+                task_type_mapping = {
+                    'Work Setup': 'registration',
+                    'Writer Splits': 'registration',
+                    'Publisher Splits': 'registration',
+                    'Legal': 'general',
+                    'Recording Setup': 'recording',
+                    'Audio Files': 'recording',
+                    'Credits': 'recording',
+                    'Master Rights': 'registration',
+                    'Visual Assets': 'artwork',
+                    'Promotional Materials': 'content_creation',
+                    'Copy': 'content_creation',
+                    'Asset Review': 'review',
+                    'Technical Check': 'review',
+                    'Release Strategy': 'general',
+                    'Release Setup': 'general',
+                    'Metadata': 'general',
+                    'Distribution': 'general',
+                    'Pre-release': 'campaign_setup',
+                }
+                task_type = task_type_mapping.get(item.category, 'general')
+
+                task = Task.objects.create(
+                    title=task_title,
+                    description=task_description,
+                    task_type=task_type,
+                    status='todo',
+                    priority=request.data.get('priority', 2),
+                    song=item.song,
+                    recording=item.recording if item.recording else None,
+                    song_checklist_item=item,
+                    source_stage=item.stage,
+                    source_checklist_name=item.item_name,
+                    due_date=request.data.get('due_date'),
+                    created_by=request.user,
+                    department=request.user.profile.department if hasattr(request.user, 'profile') else None,
+                )
+
+                # Assign task to user
+                TaskAssignment.objects.create(
+                    task=task,
+                    user=user,
+                    role='assignee',
+                    assigned_by=request.user
+                )
 
             serializer = SongChecklistItemSerializer(item)
             return Response(serializer.data)
@@ -1801,3 +2224,64 @@ class SongAlertViewSet(viewsets.ReadOnlyModelViewSet):
         count = self.get_queryset().filter(is_read=False).count()
 
         return Response({'unread_count': count})
+
+
+class AlertConfigurationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Alert Configurations.
+
+    Allows admins to configure alert settings from the frontend:
+    - Enable/disable alert types
+    - Configure timing thresholds
+    - Customize notification targets
+    - Edit alert templates
+
+    Admin-only access.
+    """
+
+    queryset = AlertConfiguration.objects.all()
+    serializer_class = AlertConfigurationSerializer
+    permission_classes = [IsAuthenticated, IsNotGuest]
+    filterset_fields = ['alert_type', 'enabled']
+    ordering = ['alert_type']
+
+    def get_queryset(self):
+        """Filter based on user permissions."""
+        user = self.request.user
+
+        # Only admins can view/manage alert configurations
+        if not hasattr(user, 'profile') or user.profile.role.level < 1000:
+            return AlertConfiguration.objects.none()
+
+        return super().get_queryset()
+
+    def perform_update(self, serializer):
+        """Track who updated the configuration."""
+        serializer.save(updated_by=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        """Override to check admin permission."""
+        if not hasattr(request.user, 'profile') or request.user.profile.role.level < 1000:
+            return Response(
+                {'error': 'Only admins can modify alert configurations'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Override to check admin permission."""
+        if not hasattr(request.user, 'profile') or request.user.profile.role.level < 1000:
+            return Response(
+                {'error': 'Only admins can modify alert configurations'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        """Prevent deletion of alert configurations."""
+        return Response(
+            {'error': 'Alert configurations cannot be deleted. Disable them instead.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
