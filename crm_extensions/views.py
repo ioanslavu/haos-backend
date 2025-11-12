@@ -221,7 +221,9 @@ class TaskViewSet(OwnedResourceViewSet):
             )
 
         task.status = new_status
-        task.save()
+        # Use update_fields to skip full validation when only updating status
+        # This allows updating tasks that may not have all required fields (e.g., department)
+        task.save(update_fields=['status', 'started_at', 'completed_at', 'updated_at'])
 
         return Response(TaskSerializer(task).data)
 

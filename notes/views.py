@@ -53,14 +53,15 @@ class NoteViewSet(viewsets.ModelViewSet):
             if tag_id_list:
                 queryset = queryset.filter(tags__id__in=tag_id_list).distinct()
 
-        # Handle archived filter
-        is_archived = self.request.query_params.get('is_archived', None)
-        if is_archived is not None:
-            is_archived_bool = is_archived.lower() in ['true', '1', 'yes']
-            queryset = queryset.filter(is_archived=is_archived_bool)
-        else:
-            # By default, hide archived notes
-            queryset = queryset.filter(is_archived=False)
+        # Handle archived filter (only for list view, not for detail/actions)
+        if self.action == 'list':
+            is_archived = self.request.query_params.get('is_archived', None)
+            if is_archived is not None:
+                is_archived_bool = is_archived.lower() in ['true', '1', 'yes']
+                queryset = queryset.filter(is_archived=is_archived_bool)
+            else:
+                # By default, hide archived notes in list view
+                queryset = queryset.filter(is_archived=False)
 
         # Handle pinned filter
         is_pinned = self.request.query_params.get('is_pinned', None)

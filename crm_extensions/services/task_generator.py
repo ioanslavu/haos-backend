@@ -27,8 +27,7 @@ class TaskGenerator:
     @staticmethod
     def create_from_checklist_item(
         checklist_item: Model,
-        assigned_user: Optional[User] = None,
-        flow: Optional['FlowDefinition'] = None
+        assigned_user: Optional[User] = None
     ) -> Optional['Task']:
         """
         Create task from a checklist item.
@@ -36,7 +35,6 @@ class TaskGenerator:
         Args:
             checklist_item: SongChecklistItem instance
             assigned_user: User to assign task to (optional)
-            flow: FlowDefinition to attach (optional)
 
         Returns:
             Task: Created task or None if failed
@@ -62,14 +60,6 @@ class TaskGenerator:
                 'priority': 2,  # Normal priority
                 'task_type': 'general',
             }
-
-            # Add flow if provided
-            if flow:
-                task_data['flow'] = flow
-                # Set current step to first step
-                first_step = flow.steps.order_by('order').first()
-                if first_step:
-                    task_data['current_flow_step'] = first_step
 
             # Create task
             task = Task.objects.create(**task_data)
@@ -138,18 +128,16 @@ class TaskGenerator:
             # Add department
             department_name = resolved_config.get('department')
             if department_name:
-                try:
-                    department = Department.objects.get(name__iexact=department_name)
+                department = Department.objects.filter(name__iexact=department_name).first()
+                if department:
                     task_data['department'] = department
-                except Department.DoesNotExist:
-                    logger.warning(f"Department '{department_name}' not found")
-
-            # Add flow
-            if trigger.flow:
-                task_data['flow'] = trigger.flow
-                first_step = trigger.flow.steps.order_by('order').first()
-                if first_step:
-                    task_data['current_flow_step'] = first_step
+                else:
+                    # Log detailed error to help with debugging
+                    available_depts = list(Department.objects.values_list('name', flat=True))
+                    logger.error(
+                        f"Department '{department_name}' not found for trigger '{trigger.name}'. "
+                        f"Available departments: {', '.join(available_depts) if available_depts else 'None'}"
+                    )
 
             # Create task
             task = Task.objects.create(**task_data)
@@ -183,7 +171,7 @@ class TaskGenerator:
         Returns:
             Task: Created task or None if failed
         """
-        from crm_extensions.models import Task, FlowDefinition
+        from crm_extensions.models import Task
         from api.models import Department
 
         try:
@@ -213,23 +201,16 @@ class TaskGenerator:
             # Add department
             target_dept = resolved_config.get('target_department')
             if target_dept:
-                try:
-                    department = Department.objects.get(name__iexact=target_dept)
+                department = Department.objects.filter(name__iexact=target_dept).first()
+                if department:
                     task_data['department'] = department
-                except Department.DoesNotExist:
-                    logger.warning(f"Department '{target_dept}' not found")
-
-            # Add flow
-            flow_name = resolved_config.get('flow')
-            if flow_name:
-                try:
-                    flow = FlowDefinition.objects.get(name=flow_name, is_active=True)
-                    task_data['flow'] = flow
-                    first_step = flow.steps.order_by('order').first()
-                    if first_step:
-                        task_data['current_flow_step'] = first_step
-                except FlowDefinition.DoesNotExist:
-                    logger.warning(f"Flow '{flow_name}' not found")
+                else:
+                    # Log detailed error to help with debugging
+                    available_depts = list(Department.objects.values_list('name', flat=True))
+                    logger.error(
+                        f"Department '{target_dept}' not found for manual trigger '{trigger.button_label}'. "
+                        f"Available departments: {', '.join(available_depts) if available_depts else 'None'}"
+                    )
 
             # Create task
             task = Task.objects.create(**task_data)

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Work, Recording, Release, Track, Asset,
-    Song, SongArtist, SongChecklistItem, SongStageTransition, SongAsset, SongNote, SongAlert,
+    Song, SongArtist, SongChecklistItem, SongStageTransition, SongStageStatus, SongAsset, SongNote, SongAlert,
     AlertConfiguration
 )
 import os
@@ -417,6 +417,38 @@ class SongStageTransitionSerializer(serializers.ModelSerializer):
         read_only_fields = ['transitioned_at']
 
 
+class SongStageStatusSerializer(serializers.ModelSerializer):
+    """Serializer for SongStageStatus."""
+
+    stage_display = serializers.CharField(
+        source='get_stage_display',
+        read_only=True
+    )
+    status_display = serializers.CharField(
+        source='get_status_display',
+        read_only=True
+    )
+    days_in_status = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = SongStageStatus
+        fields = [
+            'id',
+            'stage',
+            'stage_display',
+            'status',
+            'status_display',
+            'started_at',
+            'completed_at',
+            'blocked_reason',
+            'notes',
+            'days_in_status',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'days_in_status']
+
+
 class SongAssetSerializer(serializers.ModelSerializer):
     """Serializer for SongAsset (marketing assets)."""
 
@@ -596,6 +628,9 @@ class SongDetailSerializer(serializers.ModelSerializer):
     all_artists = serializers.SerializerMethodField()
     display_artists = serializers.CharField(read_only=True)
 
+    # Stage statuses (NEW - for parallel workflows)
+    stage_statuses = SongStageStatusSerializer(many=True, read_only=True)
+
     class Meta:
         model = Song
         fields = [
@@ -608,7 +643,8 @@ class SongDetailSerializer(serializers.ModelSerializer):
             'checklist_progress', 'is_overdue', 'days_in_current_stage',
             'is_archived', 'is_blocked', 'blocked_reason', 'internal_notes',
             'external_notes',
-            'featured_artists', 'all_artists', 'display_artists'
+            'featured_artists', 'all_artists', 'display_artists',
+            'stage_statuses'
         ]
         read_only_fields = [
             'checklist_progress', 'is_overdue', 'days_in_current_stage',

@@ -1446,6 +1446,93 @@ class SongStageTransition(models.Model):
         return f"{self.song.title} - {self.from_stage} → {self.to_stage}"
 
 
+class SongStageStatus(models.Model):
+    """
+    Tracks the status of each workflow stage for a song.
+    Every song has exactly 8 SongStageStatus records (one per stage).
+    Supports multiple stages being 'in_progress' simultaneously for parallel workflows.
+    """
+
+    STAGE_STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('blocked', 'Blocked'),
+    ]
+
+    song = models.ForeignKey(
+        Song,
+        on_delete=models.CASCADE,
+        related_name='stage_statuses',
+        help_text="Associated song"
+    )
+
+    stage = models.CharField(
+        max_length=50,
+        choices=WORKFLOW_STAGES,
+        help_text="Workflow stage"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STAGE_STATUS_CHOICES,
+        default='not_started',
+        db_index=True,
+        help_text="Current status of this stage"
+    )
+
+    # Timestamps for analytics and time tracking
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When work on this stage began"
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this stage was completed"
+    )
+
+    # Blocking information
+    blocked_reason = models.TextField(
+        blank=True,
+        help_text="Why this stage is blocked (if status=blocked)"
+    )
+
+    # Stage-specific notes
+    notes = models.TextField(
+        blank=True,
+        help_text="Notes about work in this stage"
+    )
+
+    # Audit fields
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('song', 'stage')
+        ordering = ['song', 'stage']
+        indexes = [
+            models.Index(fields=['song', 'status']),
+            models.Index(fields=['status']),
+        ]
+        verbose_name = "Song Stage Status"
+        verbose_name_plural = "Song Stage Statuses"
+
+    def __str__(self):
+        return f"{self.song.title} - {self.get_stage_display()} ({self.get_status_display()})"
+
+    @property
+    def days_in_status(self):
+        """Calculate days in current status"""
+        if self.status == 'in_progress' and self.started_at:
+            return (timezone.now() - self.started_at).days
+        elif self.status == 'completed' and self.started_at and self.completed_at:
+            return (self.completed_at - self.started_at).days
+        return None
+
+
 class SongAsset(models.Model):
     """
     Marketing assets for songs (artwork, promotional materials).

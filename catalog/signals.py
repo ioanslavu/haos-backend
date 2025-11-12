@@ -7,7 +7,7 @@ Handles automation for Work, Recording, Song, and SongChecklistItem changes.
 import logging
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Work, Recording, Song, SongChecklistItem
+from .models import Work, Recording, Song, SongChecklistItem, SongStageStatus, WORKFLOW_STAGES
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +121,50 @@ def on_song_saved(sender, instance, created, **kwargs):
         logger.error(f"Error in song post_save signal for Song {instance.id}: {e}")
 
 
+@receiver(post_save, sender=Song)
+def create_song_stage_statuses(sender, instance, created, **kwargs):
+    """
+    Automatically create SongStageStatus records for new songs.
+    Creates 8 stage status records (one per workflow stage).
+    First stage (draft) is set to 'in_progress', rest are 'not_started'.
+    """
+    if created:
+        try:
+            stage_statuses = []
+
+            for idx, (stage_code, stage_name) in enumerate(WORKFLOW_STAGES):
+                # Skip 'archived' stage - it's not part of the main workflow
+                if stage_code == 'archived':
+                    continue
+
+                # First stage starts as in_progress
+                if idx == 0:
+                    status = 'in_progress'
+                    started_at = instance.created_at
+                else:
+                    status = 'not_started'
+                    started_at = None
+
+                stage_statuses.append(
+                    SongStageStatus(
+                        song=instance,
+                        stage=stage_code,
+                        status=status,
+                        started_at=started_at,
+                    )
+                )
+
+            # Bulk create for performance
+            if stage_statuses:
+                SongStageStatus.objects.bulk_create(stage_statuses)
+                logger.info(
+                    f"Song {instance.id}: Created {len(stage_statuses)} stage status records"
+                )
+
+        except Exception as e:
+            logger.error(f"Error creating stage statuses for Song {instance.id}: {e}")
+
+
 # ==================== SongChecklistItem Signals ====================
 
 @receiver(pre_save, sender=SongChecklistItem)
@@ -153,8 +197,10 @@ def on_checklist_item_saved(sender, instance, created, **kwargs):
 
             # If checklist item completed, mark task as done
             if instance.is_complete and task.status != 'done':
+                from django.utils import timezone
                 task.status = 'done'
-                task.save(update_fields=['status'])
+                task.completed_at = timezone.now()
+                task.save(update_fields=['status', 'completed_at'])
                 logger.info(
                     f"ChecklistItem {instance.id}: Marked related task {task.id} as done"
                 )
@@ -162,7 +208,8 @@ def on_checklist_item_saved(sender, instance, created, **kwargs):
             # If checklist item uncompleted, revert task status
             elif not instance.is_complete and task.status == 'done':
                 task.status = 'todo'
-                task.save(update_fields=['status'])
+                task.completed_at = None
+                task.save(update_fields=['status', 'completed_at'])
                 logger.info(
                     f"ChecklistItem {instance.id}: Reverted related task {task.id} to todo"
                 )

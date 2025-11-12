@@ -74,6 +74,14 @@ def _update_contract_task_titles(contract):
 
         # Find tasks via ContractScope relationships
         for scope in contract.scopes.all():
+            if scope.song:
+                # Find tasks for this song
+                song_tasks = Task.objects.filter(
+                    song=scope.song,
+                    task_type='contract_prep'
+                )
+                tasks_to_update.extend(song_tasks)
+
             if scope.work:
                 # Find tasks for this work
                 work_tasks = Task.objects.filter(
@@ -82,7 +90,7 @@ def _update_contract_task_titles(contract):
                 )
                 tasks_to_update.extend(work_tasks)
 
-            elif scope.recording:
+            if scope.recording:
                 # Find tasks for this recording
                 recording_tasks = Task.objects.filter(
                     recording=scope.recording,
@@ -95,7 +103,10 @@ def _update_contract_task_titles(contract):
 
         for task in tasks_to_update:
             # Determine entity name
-            if task.work:
+            if task.song:
+                entity_name = task.song.title
+                entity_type = "Song"
+            elif task.work:
                 entity_name = task.work.title
                 entity_type = "Work"
             elif task.recording:

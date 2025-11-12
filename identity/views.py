@@ -185,6 +185,19 @@ class EntityViewSet(GlobalResourceViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
+    def creative(self, request):
+        """Get all entities with creative roles (artist, producer, composer, lyricist, audio_editor). Applies search filters. Returns unpaginated list for use in dropdowns."""
+        creative_roles = ['artist', 'producer', 'composer', 'lyricist', 'audio_editor']
+        queryset = self.get_queryset().filter(
+            entity_roles__role__in=creative_roles
+        ).distinct()
+        # Apply all filters including search
+        queryset = self.filter_queryset(queryset)
+        # Return all results without pagination (for dropdown/select use)
+        serializer = EntityListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
     def business(self, request):
         """
         Get all entities with any business role.

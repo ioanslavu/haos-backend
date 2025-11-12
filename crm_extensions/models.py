@@ -364,8 +364,11 @@ class Task(models.Model):
 
     def save(self, *args, **kwargs):
         """Auto-update timestamps based on status changes"""
-        # Validate before saving
-        self.clean()
+        # Only validate on full save (not when using update_fields)
+        # This allows partial updates (like status changes) on tasks that may not have all required fields
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None:
+            self.clean()
 
         if self.status == 'in_progress' and not self.started_at:
             self.started_at = timezone.now()

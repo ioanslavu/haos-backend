@@ -101,6 +101,9 @@ urlpatterns = [
 
     # Notes API (2025)
     path('api/v1/', include('notes.urls')),
+
+    # Camps API (2025)
+    path('api/v1/camps/', include('camps.urls')),
 ]
 
 # Serve media files in development

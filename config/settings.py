@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'artist_sales',  # NEW: Unified opportunities system (2025)
     'notifications',
     'notes',  # NEW: Notes feature (2025)
+    'camps',  # NEW: Recording camps management (2025)
 ]
 
 SITE_ID = 1

@@ -983,6 +983,84 @@ class SongViewSet(viewsets.ModelViewSet):
 
         return Response({'success': True, 'message': 'Song unarchived'})
 
+    @action(detail=True, methods=['patch'], url_path='stages/(?P<stage_key>[^/.]+)')
+    def update_stage_status(self, request, pk=None, stage_key=None):
+        """
+        Update the status of a specific workflow stage.
+        Supports parallel workflows by allowing multiple stages to be 'in_progress'.
+
+        PATCH /songs/{id}/stages/{stage_key}/
+        {
+            "status": "in_progress",  // or "completed", "blocked", "not_started"
+            "notes": "Starting cover art creation",
+            "blocked_reason": "Waiting for legal clearance"  // required if status=blocked
+        }
+        """
+        from .models import SongStageStatus
+        from django.shortcuts import get_object_or_404
+
+        song = self.get_object()
+
+        # Get the stage status record
+        try:
+            stage_status = get_object_or_404(SongStageStatus, song=song, stage=stage_key)
+        except:
+            return Response(
+                {'error': f'Stage {stage_key} not found for this song'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check permission
+        if not song_permissions.user_can_edit_song(request.user, song):
+            return Response(
+                {'error': 'You do not have permission to update this song'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get new status
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response(
+                {'error': 'status field is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate status value
+        valid_statuses = ['not_started', 'in_progress', 'completed', 'blocked']
+        if new_status not in valid_statuses:
+            return Response(
+                {'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update status
+        old_status = stage_status.status
+        stage_status.status = new_status
+
+        # Auto-update timestamps based on status change
+        if new_status == 'in_progress' and old_status != 'in_progress':
+            stage_status.started_at = timezone.now()
+        elif new_status == 'completed' and old_status != 'completed':
+            stage_status.completed_at = timezone.now()
+
+        # Update optional fields
+        if 'notes' in request.data:
+            stage_status.notes = request.data['notes']
+
+        if 'blocked_reason' in request.data:
+            stage_status.blocked_reason = request.data['blocked_reason']
+        elif new_status == 'blocked' and not stage_status.blocked_reason:
+            return Response(
+                {'error': 'blocked_reason is required when status is blocked'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        stage_status.save()
+
+        # Return updated song with all stage statuses
+        serializer = SongDetailSerializer(song, context={'request': request})
+        return Response(serializer.data)
+
     @action(detail=False, methods=['get'])
     def my_queue(self, request):
         """
