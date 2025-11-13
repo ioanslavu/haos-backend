@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0017_rename_api_userpro_role_9579a2_idx_api_userpro_role_id_4a16d0_idx_and_more'),
+        ('api', '0016_alter_departmentrequest_requested_department'),
         ('camps', '0001_initial'),
     ]
 

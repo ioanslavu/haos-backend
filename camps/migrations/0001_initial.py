@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('api', '0017_rename_api_userpro_role_9579a2_idx_api_userpro_role_id_4a16d0_idx_and_more'),
+        ('api', '0016_alter_departmentrequest_requested_department'),
         ('identity', '0019_remove_entity_entity_name_trgm_idx_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]

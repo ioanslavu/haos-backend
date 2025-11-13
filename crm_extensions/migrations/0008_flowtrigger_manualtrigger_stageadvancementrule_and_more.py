@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0017_rename_api_userpro_role_9579a2_idx_api_userpro_role_id_4a16d0_idx_and_more'),
+        ('api', '0016_alter_departmentrequest_requested_department'),
         ('artist_sales', '0002_alter_approval_file_url'),
         ('campaigns', '0016_rename_campaigns_c_campaig_1ae638_idx_campaigns_c_campaig_bc4d6f_idx_and_more'),
         ('catalog', '0003_add_song_artist_and_featured_artists'),
