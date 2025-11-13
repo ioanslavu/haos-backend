@@ -44,6 +44,7 @@ class CampaignListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'campaign_name',
+            'campaign_type',
             'client',
             'artist',
             'brand',
@@ -160,6 +161,7 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'campaign_name',
+            'campaign_type',
             'client',
             'artist',
             'brand',
@@ -249,6 +251,7 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'campaign_name',
+            'campaign_type',
             'client',
             'artist',
             'brand',
@@ -278,6 +281,7 @@ class CampaignCreateUpdateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
         extra_kwargs = {
+            'campaign_type': {'required': False, 'allow_null': True},
             'department': {'required': False, 'allow_null': True},
             'service_types': {'required': False},
             'platforms': {'required': False},

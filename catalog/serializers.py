@@ -383,7 +383,7 @@ class SongChecklistItemSerializer(serializers.ModelSerializer):
             'id', 'song', 'recording', 'recording_title', 'stage', 'category',
             'item_name', 'description', 'order', 'required', 'validation_type',
             'validation_rule', 'is_complete', 'completed_by', 'completed_by_name',
-            'completed_at', 'help_text', 'help_link', 'assigned_to', 'assigned_to_name',
+            'completed_at', 'help_text', 'help_link', 'asset_url', 'assigned_to', 'assigned_to_name',
             'is_blocker', 'depends_on'
         ]
         read_only_fields = ['completed_at', 'recording_title']

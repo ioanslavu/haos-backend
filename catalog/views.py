@@ -737,8 +737,7 @@ class SongFilter(django_filters.FilterSet):
         """Search songs by title or artist name."""
         return queryset.filter(
             Q(title__icontains=value) |
-            Q(artist__name__icontains=value) |
-            Q(internal_notes__icontains=value)
+            Q(artist__display_name__icontains=value)
         ).distinct()
 
 
@@ -907,6 +906,11 @@ class SongViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Set target_stage in request data
+        request.data['target_stage'] = 'marketing_assets'
+        if 'notes' not in request.data:
+            request.data['notes'] = 'Sent to marketing for asset creation'
+
         # Use transition action
         return self.transition(request, pk)
 
@@ -929,6 +933,11 @@ class SongViewSet(viewsets.ModelViewSet):
 
         # Create special alert
         SongAlertService.create_send_to_digital_alert(song, request.user)
+
+        # Set target_stage in request data
+        request.data['target_stage'] = 'digital_distribution'
+        if 'notes' not in request.data:
+            request.data['notes'] = 'Sent to digital distribution'
 
         # Use transition action
         return self.transition(request, pk)
@@ -1917,6 +1926,42 @@ class SongChecklistViewSet(viewsets.ReadOnlyModelViewSet):
         if song_id:
             return self.queryset.filter(song_id=song_id).order_by('order', 'id')
         return self.queryset.none()
+
+    @action(detail=True, methods=['patch'])
+    def update_asset_url(self, request, song_pk=None, pk=None):
+        """
+        Update asset_url for a checklist item.
+
+        PATCH /songs/{song_id}/checklist/{item_id}/update_asset_url/
+        {
+            "asset_url": "https://drive.google.com/..."
+        }
+        """
+        item = self.get_object()
+
+        # Check permission
+        if not song_permissions.user_can_edit_song(request.user, item.song):
+            return Response(
+                {'error': 'You do not have permission to edit this checklist'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        asset_url = request.data.get('asset_url', '').strip()
+
+        # Update asset_url
+        item.asset_url = asset_url
+
+        # Set completed_by if asset_url is being added
+        if asset_url and not item.completed_by:
+            item.completed_by = request.user
+
+        item.save()
+
+        # Update song's computed fields
+        item.song.update_computed_fields()
+
+        serializer = SongChecklistItemSerializer(item)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def toggle(self, request, song_pk=None, pk=None):

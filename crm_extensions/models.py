@@ -374,6 +374,16 @@ class Task(models.Model):
             self.started_at = timezone.now()
         elif self.status == 'done' and not self.completed_at:
             self.completed_at = timezone.now()
+
+            # Auto-calculate actual_hours if started_at exists and actual_hours not already set
+            if self.started_at and not self.actual_hours:
+                time_diff = self.completed_at - self.started_at
+                self.actual_hours = round(time_diff.total_seconds() / 3600, 2)  # Convert to hours with 2 decimals
+
+                # If update_fields is specified, add actual_hours to it
+                if update_fields and 'actual_hours' not in update_fields:
+                    update_fields = list(update_fields) + ['actual_hours']
+                    kwargs['update_fields'] = update_fields
         elif self.status not in ['done', 'cancelled'] and self.completed_at:
             self.completed_at = None
 

@@ -93,9 +93,15 @@ def on_deliverable_saved(sender, instance, created, **kwargs):
     1. Mark related task as done when asset_url is added
     2. Reopen task when status changes to 'revision_requested'
     3. Track full history of task status changes
+    4. Send notifications to Sales department when asset is uploaded
     """
     from crm_extensions.models import Task
     from django.utils import timezone
+    from django.contrib.auth import get_user_model
+    from api.models import Department
+    from notifications.services import NotificationService
+
+    User = get_user_model()
 
     try:
         # Find tasks linked to this deliverable using explicit FK
@@ -114,6 +120,72 @@ def on_deliverable_saved(sender, instance, created, **kwargs):
                     logger.info(
                         f"Deliverable {instance.id}: Marked task {task.id} as done (asset uploaded)"
                     )
+
+                    # 4. Send notifications to Sales department
+                    try:
+                        # Get deliverable type display name
+                        deliverable_type = instance.get_deliverable_type_display()
+                        opportunity = instance.opportunity
+
+                        # Notification message
+                        message = f"Marketing completed: {deliverable_type} for {opportunity.title}"
+                        action_url = f"/opportunities/{opportunity.id}?tab=deliverables"
+
+                        # Get Sales Department
+                        try:
+                            sales_dept = Department.objects.get(name='Sales Department')
+
+                            # Notify Sales managers
+                            sales_managers = User.objects.filter(
+                                profile__department=sales_dept,
+                                profile__role__level__gte=300  # Manager level
+                            )
+
+                            for manager in sales_managers:
+                                NotificationService.create_notification(
+                                    user=manager,
+                                    message=message,
+                                    notification_type='system',
+                                    action_url=action_url,
+                                    metadata={
+                                        'task_id': task.id,
+                                        'deliverable_id': instance.id,
+                                        'opportunity_id': opportunity.id,
+                                        'deliverable_type': instance.deliverable_type,
+                                        'asset_url': instance.asset_url
+                                    }
+                                )
+
+                            logger.info(
+                                f"Deliverable {instance.id}: Sent notifications to {sales_managers.count()} Sales managers"
+                            )
+
+                        except Department.DoesNotExist:
+                            logger.warning("Sales Department not found for notifications")
+
+                        # Notify opportunity owner
+                        if opportunity.owner:
+                            NotificationService.create_notification(
+                                user=opportunity.owner,
+                                message=message,
+                                notification_type='system',
+                                action_url=action_url,
+                                metadata={
+                                    'task_id': task.id,
+                                    'deliverable_id': instance.id,
+                                    'opportunity_id': opportunity.id,
+                                    'deliverable_type': instance.deliverable_type,
+                                    'asset_url': instance.asset_url
+                                }
+                            )
+                            logger.info(
+                                f"Deliverable {instance.id}: Notified opportunity owner {opportunity.owner.username}"
+                            )
+
+                    except Exception as notification_error:
+                        logger.error(
+                            f"Error sending notifications for deliverable {instance.id}: {notification_error}"
+                        )
 
             # 2. Reopen task when status changes to 'revision_requested'
             if hasattr(instance, '_old_status') and instance._old_status:

@@ -177,11 +177,23 @@ class TaskGenerator:
         try:
             config = trigger.action_config or {}
 
+            # Debug logging
+            logger.info(
+                f"Manual trigger '{trigger.button_label}': Creating task for {entity.__class__.__name__} #{entity.id}"
+            )
+            if hasattr(entity, 'opportunity') and entity.opportunity:
+                logger.info(f"  - Deliverable has opportunity: {entity.opportunity.title}")
+            else:
+                logger.warning(f"  - Entity does not have opportunity relationship!")
+
             # Merge entity and context_data for template resolution
             template_context = {**context_data} if context_data else {}
 
             # Resolve templates
             resolved_config = TaskGenerator._resolve_templates(config, entity, template_context)
+
+            # Debug: log resolved title
+            logger.info(f"  - Resolved title: {resolved_config.get('task_title_template', 'N/A')}")
 
             # Build task data
             task_data = {
@@ -214,6 +226,28 @@ class TaskGenerator:
 
             # Create task
             task = Task.objects.create(**task_data)
+
+            # Auto-assign department manager(s) if specified
+            if 'department' in task_data and task_data['department']:
+                from crm_extensions.models import TaskAssignment
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                # Get department managers only
+                managers = User.objects.filter(
+                    profile__department=task_data['department'],
+                    profile__role__code__in=['manager', 'department_manager', 'marketing_manager'],
+                    is_active=True
+                )
+
+                # Assign managers to the task
+                for manager in managers:
+                    task.assigned_users.add(manager)
+
+                logger.info(
+                    f"Task {task.id}: Auto-assigned {managers.count()} manager(s) "
+                    f"from {task_data['department'].name}"
+                )
 
             logger.info(
                 f"Created task {task.id} ('{task.title}') from manual trigger '{trigger.button_label}' "
@@ -289,6 +323,10 @@ class TaskGenerator:
                     for part in parts:
                         if hasattr(obj, part):
                             obj = getattr(obj, part)
+                            # Check if we got None - stop resolution
+                            if obj is None:
+                                obj = f'{{{match}}}'  # Keep original if None
+                                break
                         else:
                             obj = f'{{{match}}}'  # Keep original if not found
                             break

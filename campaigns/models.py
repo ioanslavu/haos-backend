@@ -21,6 +21,13 @@ class Campaign(models.Model):
         ('lost', 'Lost'),
     ]
 
+    CAMPAIGN_TYPE_CHOICES = [
+        ('endorsement', 'Endorsement'),
+        ('post', 'Post'),
+        ('song', 'Song'),
+        ('sale', 'Sale'),
+    ]
+
     # Core relationships (all reference Entity model from identity app)
     client = models.ForeignKey(
         'identity.Entity',
@@ -79,6 +86,14 @@ class Campaign(models.Model):
         max_length=255,
         db_index=True,
         help_text="Name of the campaign"
+    )
+
+    campaign_type = models.CharField(
+        max_length=20,
+        choices=CAMPAIGN_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Type of campaign (optional)"
     )
 
     value = models.DecimalField(

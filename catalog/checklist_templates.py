@@ -149,7 +149,7 @@ RECORDING_CHECKLIST_TEMPLATE = [
 # Marketing Assets Stage Checklist
 MARKETING_ASSETS_CHECKLIST_TEMPLATE = [
     {
-        'category': 'Visual Assets',
+        'category': 'Core Assets',
         'item_name': 'Cover artwork uploaded',
         'description': 'Upload primary cover artwork (minimum 3000x3000px)',
         'required': True,
@@ -164,7 +164,7 @@ MARKETING_ASSETS_CHECKLIST_TEMPLATE = [
         'order': 1,
     },
     {
-        'category': 'Visual Assets',
+        'category': 'Core Assets',
         'item_name': 'Press photo uploaded',
         'description': 'Upload high-res press photo of artist',
         'required': True,
@@ -173,28 +173,131 @@ MARKETING_ASSETS_CHECKLIST_TEMPLATE = [
         'order': 2,
     },
     {
-        'category': 'Promotional Materials',
-        'item_name': 'Social media assets created',
-        'description': 'Create Instagram, Facebook, Twitter graphics',
-        'required': True,
-        'validation_type': 'manual',
-        'order': 3,
-    },
-    {
-        'category': 'Copy',
+        'category': 'Core Assets',
         'item_name': 'Marketing copy written',
         'description': 'Write press release and promotional copy',
         'required': True,
         'validation_type': 'manual',
-        'order': 4,
+        'help_text': 'Include song description, artist bio, release story',
+        'order': 3,
+    },
+
+    # Instagram Content
+    {
+        'category': 'Instagram',
+        'item_name': 'Instagram feed post created',
+        'description': 'Create Instagram feed post (1080x1080px)',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'Square format, include cover art or artist photo',
+        'order': 10,
     },
     {
-        'category': 'Optional',
-        'item_name': 'Lyric video created',
-        'description': 'Create lyric video (if applicable)',
+        'category': 'Instagram',
+        'item_name': 'Instagram Reel created',
+        'description': 'Create Instagram Reel (9:16 vertical video, 15-90s)',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'Vertical video, hook in first 3 seconds, captions',
+        'order': 11,
+    },
+    {
+        'category': 'Instagram',
+        'item_name': 'Instagram Story graphics created',
+        'description': 'Create 3-5 Instagram Story slides (1080x1920px)',
         'required': False,
         'validation_type': 'manual',
-        'order': 5,
+        'help_text': 'Use stickers, polls, countdown for engagement',
+        'order': 12,
+    },
+
+    # Facebook Content
+    {
+        'category': 'Facebook',
+        'item_name': 'Facebook post graphic created',
+        'description': 'Create Facebook post graphic (1200x630px)',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'Landscape or square format, optimized for news feed',
+        'order': 20,
+    },
+    {
+        'category': 'Facebook',
+        'item_name': 'Facebook Reel created',
+        'description': 'Create Facebook Reel (9:16 vertical video)',
+        'required': False,
+        'validation_type': 'manual',
+        'help_text': 'Can reuse Instagram Reel content',
+        'order': 21,
+    },
+
+    # YouTube Content
+    {
+        'category': 'YouTube',
+        'item_name': 'YouTube video thumbnail created',
+        'description': 'Create custom YouTube thumbnail (1280x720px)',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'High contrast, readable text, compelling imagery',
+        'order': 30,
+    },
+    {
+        'category': 'YouTube',
+        'item_name': 'YouTube Shorts video created',
+        'description': 'Create YouTube Shorts video (9:16 vertical, <60s)',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'Vertical format, fast-paced, attention-grabbing',
+        'order': 31,
+    },
+    {
+        'category': 'YouTube',
+        'item_name': 'YouTube video description written',
+        'description': 'Write YouTube video description with links and credits',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'Include streaming links, social media, lyrics, credits',
+        'order': 32,
+    },
+
+    # TikTok Content
+    {
+        'category': 'TikTok',
+        'item_name': 'TikTok video created',
+        'description': 'Create TikTok promotional video (9:16 vertical, 15-60s)',
+        'required': True,
+        'validation_type': 'manual',
+        'help_text': 'Use trending sounds, effects, and hashtags',
+        'order': 40,
+    },
+    {
+        'category': 'TikTok',
+        'item_name': 'TikTok behind-the-scenes content',
+        'description': 'Create BTS or making-of content for TikTok',
+        'required': False,
+        'validation_type': 'manual',
+        'help_text': 'Showcase recording process, rehearsals, or artist moments',
+        'order': 41,
+    },
+
+    # Additional Content
+    {
+        'category': 'Additional Content',
+        'item_name': 'Lyric video created',
+        'description': 'Create full lyric video (1080x1080 or 1920x1080)',
+        'required': False,
+        'validation_type': 'manual',
+        'help_text': 'Animated lyrics synced to song',
+        'order': 50,
+    },
+    {
+        'category': 'Additional Content',
+        'item_name': 'Visualizer video created',
+        'description': 'Create audio visualizer or simple animated video',
+        'required': False,
+        'validation_type': 'manual',
+        'help_text': 'For streaming platforms and background content',
+        'order': 51,
     },
 ]
 

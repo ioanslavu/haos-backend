@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, pagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -23,6 +23,13 @@ from .serializers import (
 from .permissions import TaskPermission, ActivityPermission, EntityChangeRequestPermission
 
 
+class TaskPagination(pagination.PageNumberPagination):
+    """Custom pagination for tasks with higher page size limit."""
+    page_size = 100  # Default page size
+    page_size_query_param = 'limit'  # Allow client to override with ?limit=X
+    max_page_size = 1000  # Maximum allowed page size
+
+
 class TaskViewSet(OwnedResourceViewSet):
     """
     ViewSet for managing tasks with RBAC.
@@ -39,6 +46,7 @@ class TaskViewSet(OwnedResourceViewSet):
     queryset = Task.objects.all()
     permission_classes = [IsAuthenticated, TaskPermission]
     serializer_class = TaskSerializer  # Default serializer
+    pagination_class = TaskPagination  # Custom pagination with higher limits
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description', 'notes']
     ordering_fields = ['priority', 'due_date', 'created_at', 'status']
@@ -74,7 +82,7 @@ class TaskViewSet(OwnedResourceViewSet):
     select_related_fields = [
         'campaign', 'entity', 'contract', 'assigned_to', 'created_by', 'department', 'parent_task',
         # Universal task system entities
-        'song', 'song__artist', 'work', 'recording', 'opportunity', 'deliverable', 'song_checklist_item'
+        'song', 'song__artist', 'work', 'recording', 'opportunity', 'deliverable', 'deliverable__opportunity', 'song_checklist_item'
     ]
     prefetch_related_fields = ['blocks_tasks', 'subtasks', 'assignments__user']
 
@@ -182,6 +190,36 @@ class TaskViewSet(OwnedResourceViewSet):
                 assigned_by=user
             )
 
+    def perform_update(self, serializer):
+        """Handle updating task and reassigning users if assigned_user_ids is provided."""
+        # Extract assigned_user_ids before saving
+        assigned_user_ids = serializer.validated_data.pop('assigned_user_ids', None)
+
+        # Save task with updates
+        task = serializer.save()
+
+        # If assigned_user_ids was provided, update assignments
+        if assigned_user_ids is not None:
+            from .models import TaskAssignment
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            # Remove existing assignee assignments
+            TaskAssignment.objects.filter(task=task, role='assignee').delete()
+
+            # Create new assignments for specified users
+            for user_id in assigned_user_ids:
+                try:
+                    assignee = User.objects.get(id=user_id)
+                    TaskAssignment.objects.create(
+                        task=task,
+                        user=assignee,
+                        role='assignee',
+                        assigned_by=self.request.user
+                    )
+                except User.DoesNotExist:
+                    pass  # Skip invalid user IDs
+
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Get task statistics for dashboard."""
@@ -208,6 +246,58 @@ class TaskViewSet(OwnedResourceViewSet):
 
         return Response(stats)
 
+    @action(detail=False, methods=['get'])
+    def inbox(self, request):
+        """
+        Get user's task inbox/overview with tasks and notifications.
+
+        Returns:
+        - my_tasks: Tasks assigned to the user
+        - notifications: Recent unread notifications
+        - summary: Quick stats
+        """
+        from notifications.models import Notification
+        from notifications.serializers import NotificationListSerializer
+
+        user = request.user
+
+        # Get user's tasks (todo and in_progress only)
+        my_tasks = self.get_queryset().filter(
+            assigned_users=user,
+            status__in=['todo', 'in_progress', 'blocked']
+        ).order_by('-priority', 'due_date')[:20]
+
+        # Get recent unread notifications
+        notifications = Notification.objects.filter(
+            user=user,
+            is_read=False
+        ).order_by('-created_at')[:10]
+
+        # Summary stats
+        summary = {
+            'total_tasks': self.get_queryset().filter(assigned_users=user).count(),
+            'active_tasks': self.get_queryset().filter(
+                assigned_users=user,
+                status__in=['todo', 'in_progress']
+            ).count(),
+            'blocked_tasks': self.get_queryset().filter(
+                assigned_users=user,
+                status='blocked'
+            ).count(),
+            'unread_notifications': notifications.count(),
+            'overdue_tasks': self.get_queryset().filter(
+                assigned_users=user,
+                due_date__lt=timezone.now(),
+                status__in=['todo', 'in_progress', 'blocked']
+            ).count()
+        }
+
+        return Response({
+            'tasks': TaskSerializer(my_tasks, many=True).data,
+            'notifications': NotificationListSerializer(notifications, many=True).data,
+            'summary': summary
+        })
+
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
         """Quick status update for a task."""
@@ -223,7 +313,8 @@ class TaskViewSet(OwnedResourceViewSet):
         task.status = new_status
         # Use update_fields to skip full validation when only updating status
         # This allows updating tasks that may not have all required fields (e.g., department)
-        task.save(update_fields=['status', 'started_at', 'completed_at', 'updated_at'])
+        # Note: actual_hours may be added dynamically by the save() method if status -> done
+        task.save(update_fields=['status', 'started_at', 'completed_at', 'actual_hours', 'updated_at'])
 
         return Response(TaskSerializer(task).data)
 
@@ -705,7 +796,7 @@ class ManualTriggerViewSet(viewsets.ReadOnlyModelViewSet):
                 entity = Song.objects.get(pk=entity_id)
             elif trigger.entity_type == 'deliverable':
                 from artist_sales.models import OpportunityDeliverable
-                entity = OpportunityDeliverable.objects.get(pk=entity_id)
+                entity = OpportunityDeliverable.objects.select_related('opportunity').get(pk=entity_id)
             elif trigger.entity_type == 'opportunity':
                 from artist_sales.models import Opportunity
                 entity = Opportunity.objects.get(pk=entity_id)

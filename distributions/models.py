@@ -38,6 +38,7 @@ class Distribution(models.Model):
         ('artist', 'Artist'),
         ('label', 'Label'),
         ('aggregator', 'Aggregator'),
+        ('company', 'Company'),
     ]
 
     DEAL_STATUS_CHOICES = [
@@ -59,6 +60,11 @@ class Distribution(models.Model):
         choices=DEAL_TYPE_CHOICES,
         db_index=True,
         help_text="Type of distribution deal (auto-populated from entity roles, but editable)"
+    )
+
+    includes_dsps_youtube = models.BooleanField(
+        default=False,
+        help_text="Whether this distribution includes DSPs and/or YouTube"
     )
 
     # Optional contract reference

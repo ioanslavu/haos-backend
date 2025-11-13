@@ -30,6 +30,11 @@ class TaskSerializer(serializers.ModelSerializer):
     Includes universal task system entity relationships.
     """
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
+
+    # Helper fields for easier frontend access
+    assigned_to_users = serializers.SerializerMethodField(read_only=True)
+    assigned_to_users_detail = serializers.SerializerMethodField(read_only=True)
+
     created_by_detail = serializers.SerializerMethodField(read_only=True)
     campaign_detail = serializers.SerializerMethodField(read_only=True)
     entity_detail = serializers.SerializerMethodField(read_only=True)
@@ -87,6 +92,8 @@ class TaskSerializer(serializers.ModelSerializer):
 
             # Assignment
             'assignments',
+            'assigned_to_users',  # Helper: array of user IDs
+            'assigned_to_users_detail',  # Helper: array of user objects
             'created_by',
             'created_by_detail',
             'department',
@@ -122,12 +129,27 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at', 'started_at', 'completed_at', 'follow_up_reminder_sent']
 
+    def get_assigned_to_users(self, obj):
+        """Return array of user IDs assigned to this task"""
+        return [assignment.user.id for assignment in obj.assignments.all()]
+
+    def get_assigned_to_users_detail(self, obj):
+        """Return array of user objects assigned to this task"""
+        return [
+            {
+                'id': assignment.user.id,
+                'email': assignment.user.email,
+                'full_name': assignment.user.get_full_name() or assignment.user.email
+            }
+            for assignment in obj.assignments.all()
+        ]
+
     def get_created_by_detail(self, obj):
         if obj.created_by:
             return {
                 'id': obj.created_by.id,
                 'email': obj.created_by.email,
-                'full_name': f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.email
+                'full_name': obj.created_by.get_full_name() or obj.created_by.email
             }
         return None
 
@@ -218,7 +240,7 @@ class TaskSerializer(serializers.ModelSerializer):
         if obj.opportunity:
             return {
                 'id': obj.opportunity.id,
-                'name': obj.opportunity.name,
+                'title': obj.opportunity.title,
                 'stage': obj.opportunity.stage,
                 'value': str(obj.opportunity.value) if obj.opportunity.value else None
             }
@@ -226,12 +248,19 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def get_deliverable_detail(self, obj):
         if obj.deliverable:
-            return {
+            result = {
                 'id': obj.deliverable.id,
                 'deliverable_type': obj.deliverable.get_deliverable_type_display(),
                 'status': obj.deliverable.status,
                 'due_date': obj.deliverable.due_date
             }
+            # Include opportunity if available
+            if obj.deliverable.opportunity:
+                result['opportunity'] = {
+                    'id': obj.deliverable.opportunity.id,
+                    'title': obj.deliverable.opportunity.title
+                }
+            return result
         return None
 
     def get_checklist_item_detail(self, obj):
@@ -366,7 +395,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             return {
                 'id': obj.created_by.id,
                 'email': obj.created_by.email,
-                'full_name': f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.email
+                'full_name': obj.created_by.get_full_name() or obj.created_by.email
             }
         return None
 

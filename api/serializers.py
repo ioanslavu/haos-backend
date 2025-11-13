@@ -87,6 +87,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model with profile information."""
 
     profile = UserProfileSerializer(read_only=True)
+    full_name = serializers.SerializerMethodField(read_only=True)
     role = serializers.CharField(source='profile.role_code', read_only=True)
     role_detail = RoleSerializer(source='profile.role', read_only=True)
     department = serializers.CharField(source='profile.department_code', read_only=True, allow_null=True)
@@ -101,6 +102,7 @@ class UserSerializer(serializers.ModelSerializer):
             'email',
             'first_name',
             'last_name',
+            'full_name',
             'is_active',
             'date_joined',
             'profile',
@@ -111,7 +113,11 @@ class UserSerializer(serializers.ModelSerializer):
             'profile_picture',
             'setup_completed',
         ]
-        read_only_fields = ['id', 'email', 'date_joined']
+        read_only_fields = ['id', 'email', 'date_joined', 'full_name']
+
+    def get_full_name(self, obj):
+        """Return full name or email as fallback"""
+        return obj.get_full_name() or obj.email
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):

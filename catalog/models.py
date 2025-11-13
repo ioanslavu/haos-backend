@@ -1264,6 +1264,12 @@ class SongChecklistItem(models.Model):
         help_text="Link to documentation or tutorial"
     )
 
+    asset_url = models.URLField(
+        blank=True,
+        max_length=500,
+        help_text="URL to the completed asset (e.g., Google Drive link, Dropbox link)"
+    )
+
     # ============ ASSIGNMENT ============
     assigned_to = models.ForeignKey(
         User,
@@ -1328,10 +1334,18 @@ class SongChecklistItem(models.Model):
                 field = self.validation_rule.get('field')
                 if entity and field:
                     if entity == 'work' and self.song.work:
-                        return bool(getattr(self.song.work, field, None))
+                        # Special handling for identifier fields (iswc, isrc, upc)
+                        if field.lower() == 'iswc':
+                            return bool(self.song.work.get_iswc())
+                        else:
+                            return bool(getattr(self.song.work, field, None))
                     elif entity == 'recording':
                         for recording in self.song.recordings.all():
-                            if getattr(recording, field, None):
+                            # Special handling for ISRC
+                            if field.lower() == 'isrc':
+                                if recording.get_isrc():
+                                    return True
+                            elif getattr(recording, field, None):
                                 return True
 
         elif self.validation_type == 'auto_split_validated':
@@ -1351,10 +1365,35 @@ class SongChecklistItem(models.Model):
             if self.validation_rule:
                 entity = self.validation_rule.get('entity')
                 min_count = self.validation_rule.get('min_count', 1)
+
                 if entity == 'recording':
                     return self.song.recordings.count() >= min_count
                 elif entity == 'release':
                     return self.song.releases.count() >= min_count
+                elif entity == 'work_writers' and self.song.work:
+                    # Count writer splits for this work
+                    from rights.models import Split
+                    writer_count = Split.objects.filter(
+                        scope='work',
+                        object_id=self.song.work.id,
+                        right_type='writer'
+                    ).count()
+                    return writer_count >= min_count
+                elif entity == 'work_publishers' and self.song.work:
+                    # Count publisher splits for this work
+                    from rights.models import Split
+                    publisher_count = Split.objects.filter(
+                        scope='work',
+                        object_id=self.song.work.id,
+                        right_type='publisher'
+                    ).count()
+                    return publisher_count >= min_count
+                elif entity == 'recording_credits':
+                    # Count recording credits
+                    for recording in self.song.recordings.all():
+                        # Assuming credits are stored somewhere - adjust as needed
+                        # For now, just pass
+                        pass
 
         return False
 
